@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "573330612766",
+    "project_id": "febri-store",
+    "storage_bucket": "febri-store.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:573330612766:android:42c4f571b568faac72c40f",
+        "android_client_info": {
+          "package_name": "com.febri.store"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDtoX8vCs2uaYNDtgxcGsFYB6NuuRaMmBw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,0 +1,54 @@
+{
+  "expo": {
+    "name": "Febri Store",
+    "slug": "febri-store",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#4A90E2"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.febri.store",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Aplikasi ini memerlukan akses lokasi untuk fitur alamat pengiriman otomatis.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Aplikasi ini memerlukan akses lokasi untuk fitur alamat pengiriman otomatis."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#4A90E2"
+      },
+      "package": "com.febri.store",
+      "versionCode": 1,
+      "googleServicesFile": "./google-services.json",
+      "permissions": [
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.RECORD_AUDIO"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-image-picker",
+      "expo-document-picker",
+      "expo-location",
+      "expo-maps"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "0c6a46a4-0009-44f2-bc66-78844dfe72d9"
+      }
+    }
+  }
+}
