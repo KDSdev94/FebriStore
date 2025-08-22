@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -8,24 +8,46 @@ import {
   SafeAreaView,
   RefreshControl,
   Alert,
-} from 'react-native';
-import { MaterialCommunityIcons, Feather } from '@expo/vector-icons';
-import { useAuth } from '../contexts/AuthContext';
-import { useOrder } from '../contexts/OrderContext';
-import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '../utils/constants';
+  Modal,
+  TextInput,
+} from "react-native";
+import { MaterialCommunityIcons, Feather } from "@expo/vector-icons";
+import { useAuth } from "../contexts/AuthContext";
+import { useOrder } from "../contexts/OrderContext";
+
+import {
+  COLORS,
+  TYPOGRAPHY,
+  SPACING,
+  BORDER_RADIUS,
+  SHADOWS,
+} from "../utils/constants";
 
 const OrderScreen = ({ navigation }) => {
   const { user } = useAuth();
-  const { orders: allOrders, loading, getOrdersByUser, getOrdersByStatus, getStatusInfo, refreshOrders, updateOrderStatus } = useOrder();
+  const {
+    orders: allOrders,
+    loading,
+    getOrdersByUser,
+    getOrdersByStatus,
+    getStatusInfo,
+    refreshOrders,
+    updateOrderStatus,
+    clearAllOrders,
+    deleteAllOrdersByBuyer,
+  } = useOrder();
   const [refreshing, setRefreshing] = useState(false);
-  const [selectedTab, setSelectedTab] = useState('all');
+  const [selectedTab, setSelectedTab] = useState("all");
+  const [confirmVisible, setConfirmVisible] = useState(false);
+  const [confirmText, setConfirmText] = useState("");
+  const [deleting, setDeleting] = useState(false);
 
   const orderTabs = [
-    { id: 'all', label: 'Semua', icon: 'format-list-bulleted' },
-    { id: 'pending', label: 'Menunggu', icon: 'clock-outline' },
-    { id: 'processing', label: 'Diproses', icon: 'package-variant' },
-    { id: 'shipped', label: 'Dikirim', icon: 'truck-delivery' },
-    { id: 'delivered', label: 'Selesai', icon: 'check-circle' },
+    { id: "all", label: "Semua", icon: "format-list-bulleted" },
+    { id: "pending", label: "Menunggu", icon: "clock-outline" },
+    { id: "processing", label: "Diproses", icon: "package-variant" },
+    { id: "shipped", label: "Dikirim", icon: "truck-delivery" },
+    { id: "delivered", label: "Selesai", icon: "check-circle" },
   ];
 
   // Get user's orders
@@ -38,7 +60,7 @@ const OrderScreen = ({ navigation }) => {
 
   // ✅ Listen for navigation focus events using useEffect approach
   useEffect(() => {
-    const unsubscribe = navigation.addListener('focus', () => {
+    const unsubscribe = navigation.addListener("focus", () => {
       refreshOrders();
     });
 
@@ -52,85 +74,94 @@ const OrderScreen = ({ navigation }) => {
   };
 
   const handlePayment = (order) => {
-    if (order.paymentMethod === 'cod') {
+    if (order.paymentMethod === "cod") {
       // COD - langsung konfirmasi pembayaran
       Alert.alert(
-        'Konfirmasi Pembayaran',
-        'Apakah Anda yakin ingin mengkonfirmasi pembayaran COD untuk pesanan ini?',
+        "Konfirmasi Pembayaran",
+        "Apakah Anda yakin ingin mengkonfirmasi pembayaran COD untuk pesanan ini?",
         [
           {
-            text: 'Batal',
-            style: 'cancel',
+            text: "Batal",
+            style: "cancel",
           },
           {
-            text: 'Konfirmasi',
-            style: 'default',
+            text: "Konfirmasi",
+            style: "default",
             onPress: async () => {
-              const result = await updateOrderStatus(order.id, 'payment_confirmed');
+              const result = await updateOrderStatus(
+                order.id,
+                "payment_confirmed"
+              );
               if (result.success) {
-                Alert.alert('Berhasil', 'Pembayaran COD berhasil dikonfirmasi!');
+                Alert.alert(
+                  "Berhasil",
+                  "Pembayaran COD berhasil dikonfirmasi!"
+                );
                 await refreshOrders();
               } else {
-                Alert.alert('Error', result.error || 'Gagal mengkonfirmasi pembayaran');
+                Alert.alert(
+                  "Error",
+                  result.error || "Gagal mengkonfirmasi pembayaran"
+                );
               }
-            }
-          }
+            },
+          },
         ]
       );
     } else {
       // Transfer - arahkan ke detail untuk upload bukti pembayaran
-      navigation.navigate('OrderDetail', { order });
+      navigation.navigate("OrderDetail", { order });
     }
   };
 
   const formatPrice = (price) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
+    return new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
       minimumFractionDigits: 0,
     }).format(price);
   };
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('id-ID', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric'
+    return date.toLocaleDateString("id-ID", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
     });
   };
 
   // Filter orders based on selected tab
-  const filteredOrders = selectedTab === 'all' 
-    ? userOrders 
-    : userOrders.filter(order => {
-        // Map status for filtering
-        const statusMap = {
-          'pending': ['pending_payment', 'pending', 'pending_verification'],
-          'processing': ['payment_confirmed', 'processing'],
-          'shipped': ['shipped'],
-          'delivered': ['delivered', 'completed', 'cod_delivered']
-        };
-        return statusMap[selectedTab]?.includes(order.status);
-      });
+  const filteredOrders =
+    selectedTab === "all"
+      ? userOrders
+      : userOrders.filter((order) => {
+          // Map status for filtering
+          const statusMap = {
+            pending: ["pending_payment", "pending", "pending_verification"],
+            processing: ["payment_confirmed", "processing"],
+            shipped: ["shipped"],
+            delivered: ["delivered", "completed", "cod_delivered"],
+          };
+          return statusMap[selectedTab]?.includes(order.status);
+        });
 
   const renderTabItem = ({ item }) => (
     <TouchableOpacity
-      style={[
-        styles.tabItem,
-        selectedTab === item.id && styles.tabItemActive
-      ]}
+      style={[styles.tabItem, selectedTab === item.id && styles.tabItemActive]}
       onPress={() => setSelectedTab(item.id)}
     >
-      <MaterialCommunityIcons 
-        name={item.icon} 
-        size={20} 
-        color={selectedTab === item.id ? COLORS.card : COLORS.textLight} 
+      <MaterialCommunityIcons
+        name={item.icon}
+        size={20}
+        color={selectedTab === item.id ? COLORS.card : COLORS.textLight}
       />
-      <Text style={[
-        styles.tabText,
-        selectedTab === item.id && styles.tabTextActive
-      ]}>
+      <Text
+        style={[
+          styles.tabText,
+          selectedTab === item.id && styles.tabTextActive,
+        ]}
+      >
         {item.label}
       </Text>
     </TouchableOpacity>
@@ -138,11 +169,11 @@ const OrderScreen = ({ navigation }) => {
 
   const renderOrderItem = ({ item }) => {
     const statusInfo = getStatusInfo(item.status);
-    
+
     return (
-      <TouchableOpacity 
+      <TouchableOpacity
         style={styles.orderCard}
-        onPress={() => navigation.navigate('OrderDetail', { order: item })}
+        onPress={() => navigation.navigate("OrderDetail", { order: item })}
       >
         {/* Header dengan Order ID, Tanggal, dan Status */}
         <View style={styles.orderHeader}>
@@ -150,11 +181,13 @@ const OrderScreen = ({ navigation }) => {
             <Text style={styles.orderId}>#{item.orderNumber}</Text>
             <Text style={styles.orderDate}>{formatDate(item.createdAt)}</Text>
           </View>
-          <View style={[styles.statusBadge, { backgroundColor: statusInfo.color }]}>
-            <MaterialCommunityIcons 
-              name={statusInfo.icon} 
-              size={14} 
-              color={COLORS.card} 
+          <View
+            style={[styles.statusBadge, { backgroundColor: statusInfo.color }]}
+          >
+            <MaterialCommunityIcons
+              name={statusInfo.icon}
+              size={14}
+              color={COLORS.card}
             />
             <Text style={styles.statusText}>{statusInfo.label}</Text>
           </View>
@@ -162,28 +195,44 @@ const OrderScreen = ({ navigation }) => {
 
         {/* Informasi Toko */}
         {(() => {
-          const sellers = [...new Set(item.items.map(orderItem => orderItem.sellerName).filter(Boolean))];
-          return sellers.length > 0 && (
-            <View style={styles.sellersContainer}>
-              <MaterialCommunityIcons name="store" size={16} color={COLORS.primary} />
-              <Text style={styles.sellersText}>
-                {sellers.length === 1 
-                  ? sellers[0]
-                  : sellers.length === 2
+          const sellers = [
+            ...new Set(
+              item.items
+                .map((orderItem) => orderItem.sellerName)
+                .filter(Boolean)
+            ),
+          ];
+          return (
+            sellers.length > 0 && (
+              <View style={styles.sellersContainer}>
+                <MaterialCommunityIcons
+                  name="store"
+                  size={16}
+                  color={COLORS.primary}
+                />
+                <Text style={styles.sellersText}>
+                  {sellers.length === 1
+                    ? sellers[0]
+                    : sellers.length === 2
                     ? `${sellers[0]}, ${sellers[1]}`
                     : sellers.length > 2
-                      ? `${sellers[0]}, ${sellers[1]} +${sellers.length - 2} toko lainnya`
-                      : sellers[0]
-                }
-              </Text>
-            </View>
+                    ? `${sellers[0]}, ${sellers[1]} +${
+                        sellers.length - 2
+                      } toko lainnya`
+                    : sellers[0]}
+                </Text>
+              </View>
+            )
           );
         })()}
 
         {/* Daftar Produk */}
         <View style={styles.orderItems}>
           {item.items.slice(0, 3).map((orderItem, index) => (
-            <View key={`${orderItem.productId}-${index}`} style={styles.orderItemRow}>
+            <View
+              key={`${orderItem.productId}-${index}`}
+              style={styles.orderItemRow}
+            >
               <Text style={styles.itemName} numberOfLines={1}>
                 {orderItem.productName}
               </Text>
@@ -203,39 +252,59 @@ const OrderScreen = ({ navigation }) => {
             <Text style={styles.totalLabel}>Total: </Text>
             <Text style={styles.totalAmount}>
               {formatPrice(
-                item.paymentMethod === 'cod' 
-                  ? item.subtotal || (item.totalAmount - (item.adminFee || 1500)) // COD tanpa biaya admin
-                  : item.totalAmount // Non-COD dengan biaya admin
+                item.paymentMethod === "cod"
+                  ? item.subtotal ??
+                      (item.totalAmount
+                        ? item.totalAmount - (item.adminFee || 1500)
+                        : 0) // COD tanpa adminFee
+                  : item.totalAmount ?? item.subtotal ?? 0 // Transfer gunakan totalAmount jika ada
               )}
             </Text>
           </View>
-          
+
           <View style={styles.orderActions}>
-            {(item.status === 'pending_payment' || item.status === 'pending') && (
-              <TouchableOpacity 
+            {(item.status === "pending_payment" ||
+              item.status === "pending") && (
+              <TouchableOpacity
                 style={styles.payButton}
                 onPress={() => handlePayment(item)}
               >
-                <MaterialCommunityIcons name="credit-card" size={14} color={COLORS.card} />
+                <MaterialCommunityIcons
+                  name="credit-card"
+                  size={14}
+                  color={COLORS.card}
+                />
                 <Text style={styles.payButtonText}>Bayar</Text>
               </TouchableOpacity>
             )}
-            {item.status === 'pending_verification' && (
+            {item.status === "pending_verification" && (
               <View style={[styles.statusIndicator, styles.waitingIndicator]}>
-                <MaterialCommunityIcons name="clock-outline" size={14} color={COLORS.warning} />
+                <MaterialCommunityIcons
+                  name="clock-outline"
+                  size={14}
+                  color={COLORS.warning}
+                />
                 <Text style={styles.waitingText}>Menunggu Verifikasi</Text>
               </View>
             )}
-            {item.status === 'payment_confirmed' && (
+            {item.status === "payment_confirmed" && (
               <View style={[styles.statusIndicator, styles.confirmedIndicator]}>
-                <MaterialCommunityIcons name="check-circle" size={14} color={COLORS.success} />
-                <Text style={styles.confirmedText}>Pembayaran Dikonfirmasi</Text>
+                <MaterialCommunityIcons
+                  name="check-circle"
+                  size={14}
+                  color={COLORS.success}
+                />
+                <Text style={styles.confirmedText}>
+                  Pembayaran Dikonfirmasi
+                </Text>
               </View>
             )}
 
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.detailButton}
-              onPress={() => navigation.navigate('OrderDetail', { order: item })}
+              onPress={() =>
+                navigation.navigate("OrderDetail", { order: item })
+              }
             >
               <Text style={styles.detailButtonText}>Detail</Text>
             </TouchableOpacity>
@@ -247,15 +316,19 @@ const OrderScreen = ({ navigation }) => {
 
   const renderEmptyOrders = () => (
     <View style={styles.emptyContainer}>
-      <MaterialCommunityIcons name="clipboard-list-outline" size={80} color={COLORS.textLight} />
+      <MaterialCommunityIcons
+        name="clipboard-list-outline"
+        size={80}
+        color={COLORS.textLight}
+      />
       <Text style={styles.emptyTitle}>Belum Ada Pesanan</Text>
       <Text style={styles.emptySubtitle}>
-        Anda belum memiliki pesanan.{'\n'}
+        Anda belum memiliki pesanan.{"\n"}
         Yuk, mulai berbelanja sekarang!
       </Text>
       <TouchableOpacity
         style={styles.shopButton}
-        onPress={() => navigation.navigate('Home')}
+        onPress={() => navigation.navigate("Home")}
       >
         <Text style={styles.shopButtonText}>Mulai Belanja</Text>
       </TouchableOpacity>
@@ -296,6 +369,97 @@ const OrderScreen = ({ navigation }) => {
           }
         />
       )}
+
+      {/* Modal Konfirmasi HAPUS */}
+      <Modal
+        visible={confirmVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setConfirmVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Konfirmasi Penghapusan</Text>
+            <Text style={styles.modalDesc}>
+              Ketik HAPUS untuk mengkonfirmasi. Tindakan ini akan menghapus
+              semua pesanan Anda dari database.
+            </Text>
+            <TextInput
+              value={confirmText}
+              onChangeText={setConfirmText}
+              placeholder="Ketik HAPUS"
+              autoCapitalize="characters"
+              style={styles.input}
+            />
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => setConfirmVisible(false)}
+                disabled={deleting}
+              >
+                <Text style={styles.cancelText}>Batal</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.modalButton,
+                  styles.deleteButton,
+                  confirmText !== "HAPUS" && { opacity: 0.5 },
+                ]}
+                disabled={confirmText !== "HAPUS" || deleting}
+                onPress={async () => {
+                  try {
+                    setDeleting(true);
+                    if (user?.role !== "buyer") {
+                      Alert.alert(
+                        "Ditolak",
+                        "Hapus massal hanya tersedia via layar Admin/Seller masing-masing."
+                      );
+                      return;
+                    }
+                    const result = await deleteAllOrdersByBuyer(user.id);
+                    if (result?.success) {
+                      Alert.alert("Berhasil", "Data pesanan berhasil dihapus.");
+                      await refreshOrders();
+                      setConfirmVisible(false);
+                    } else {
+                      Alert.alert(
+                        "Error",
+                        result?.error || "Gagal menghapus pesanan"
+                      );
+                    }
+                  } catch (e) {
+                    Alert.alert(
+                      "Error",
+                      "Terjadi kesalahan saat menghapus pesanan"
+                    );
+                  } finally {
+                    setDeleting(false);
+                  }
+                }}
+              >
+                <Text style={styles.deleteText}>
+                  {deleting ? "Menghapus..." : "Hapus"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* FAB Kanan Bawah: Hapus Semua Pesanan */}
+      <TouchableOpacity
+        style={[styles.fab, styles.fabRight]}
+        onPress={() => {
+          setConfirmText("");
+          setConfirmVisible(true);
+        }}
+      >
+        <MaterialCommunityIcons
+          name="delete-forever"
+          size={24}
+          color={COLORS.card}
+        />
+      </TouchableOpacity>
     </SafeAreaView>
   );
 };
@@ -304,6 +468,25 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
+  },
+  fab: {
+    position: "absolute",
+    bottom: SPACING.xl,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 999,
+    ...SHADOWS.large,
+  },
+  fabRight: {
+    right: SPACING.lg,
+    backgroundColor: COLORS.error,
+  },
+  fabLeft: {
+    left: SPACING.lg,
+    backgroundColor: COLORS.primary,
   },
   header: {
     backgroundColor: COLORS.card,
@@ -315,7 +498,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     ...TYPOGRAPHY.h3,
     color: COLORS.text,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   tabsContainer: {
     backgroundColor: COLORS.card,
@@ -327,8 +510,8 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.sm,
   },
   tabItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.sm,
     marginRight: SPACING.sm,
@@ -342,7 +525,7 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.caption,
     color: COLORS.textLight,
     marginLeft: SPACING.xs,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   tabTextActive: {
     color: COLORS.card,
@@ -361,9 +544,9 @@ const styles = StyleSheet.create({
     borderColor: COLORS.divider,
   },
   orderHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
     marginBottom: SPACING.md,
     paddingBottom: SPACING.sm,
     borderBottomWidth: 1,
@@ -375,37 +558,37 @@ const styles = StyleSheet.create({
   orderId: {
     ...TYPOGRAPHY.body1,
     color: COLORS.text,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: SPACING.xs,
   },
   orderDate: {
     ...TYPOGRAPHY.body2,
     color: COLORS.textSecondary,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.sm,
     borderRadius: BORDER_RADIUS.md,
     minWidth: 120,
-    justifyContent: 'center',
+    justifyContent: "center",
   },
   statusText: {
     ...TYPOGRAPHY.caption,
     color: COLORS.card,
     marginLeft: SPACING.xs,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     fontSize: 12,
   },
   sellersContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: SPACING.md,
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.sm,
-    backgroundColor: COLORS.primary + '10',
+    backgroundColor: COLORS.primary + "10",
     borderRadius: BORDER_RADIUS.sm,
     borderLeftWidth: 3,
     borderLeftColor: COLORS.primary,
@@ -414,16 +597,16 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.body2,
     color: COLORS.primary,
     marginLeft: SPACING.sm,
-    fontWeight: '600',
+    fontWeight: "600",
     flex: 1,
   },
   orderItems: {
     marginBottom: SPACING.md,
   },
   orderItemRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingVertical: SPACING.xs,
     paddingHorizontal: SPACING.sm,
     marginBottom: SPACING.xs,
@@ -435,13 +618,13 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     flex: 1,
     marginRight: SPACING.sm,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   itemQuantity: {
     ...TYPOGRAPHY.body2,
     color: COLORS.primary,
-    fontWeight: 'bold',
-    backgroundColor: COLORS.primary + '20',
+    fontWeight: "bold",
+    backgroundColor: COLORS.primary + "20",
     paddingHorizontal: SPACING.sm,
     paddingVertical: SPACING.xs,
     borderRadius: BORDER_RADIUS.xs,
@@ -449,21 +632,21 @@ const styles = StyleSheet.create({
   moreItems: {
     ...TYPOGRAPHY.caption,
     color: COLORS.textLight,
-    fontStyle: 'italic',
-    textAlign: 'center',
+    fontStyle: "italic",
+    textAlign: "center",
     marginTop: SPACING.xs,
   },
   orderFooter: {
-    flexDirection: 'column',
+    flexDirection: "column",
     borderTopWidth: 1,
     borderTopColor: COLORS.divider,
     paddingTop: SPACING.md,
     gap: SPACING.sm,
   },
   totalContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     backgroundColor: COLORS.backgroundSecondary,
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.sm,
@@ -473,17 +656,17 @@ const styles = StyleSheet.create({
   totalLabel: {
     ...TYPOGRAPHY.body1,
     color: COLORS.textSecondary,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   totalAmount: {
     ...TYPOGRAPHY.body1,
     color: COLORS.primary,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   orderActions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    alignItems: "center",
     gap: SPACING.sm,
   },
   payButton: {
@@ -491,8 +674,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.lg,
     paddingVertical: SPACING.sm,
     borderRadius: BORDER_RADIUS.md,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: SPACING.xs,
     elevation: 2,
     shadowColor: COLORS.success,
@@ -503,35 +686,35 @@ const styles = StyleSheet.create({
   payButtonText: {
     ...TYPOGRAPHY.body2,
     color: COLORS.card,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   statusIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.sm,
     borderRadius: BORDER_RADIUS.md,
     gap: SPACING.xs,
   },
   waitingIndicator: {
-    backgroundColor: COLORS.warning + '20',
+    backgroundColor: COLORS.warning + "20",
     borderWidth: 1,
     borderColor: COLORS.warning,
   },
   waitingText: {
     ...TYPOGRAPHY.caption,
     color: COLORS.warning,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   confirmedIndicator: {
-    backgroundColor: COLORS.success + '20',
+    backgroundColor: COLORS.success + "20",
     borderWidth: 1,
     borderColor: COLORS.success,
   },
   confirmedText: {
     ...TYPOGRAPHY.caption,
     color: COLORS.success,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   detailButton: {
     backgroundColor: COLORS.primary,
@@ -547,25 +730,90 @@ const styles = StyleSheet.create({
   detailButtonText: {
     ...TYPOGRAPHY.body2,
     color: COLORS.card,
-    fontWeight: 'bold',
+    fontWeight: "bold",
+  },
+
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: COLORS.overlay,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: SPACING.lg,
+  },
+  modalCard: {
+    width: "100%",
+    backgroundColor: COLORS.card,
+    borderRadius: BORDER_RADIUS.lg,
+    padding: SPACING.lg,
+    ...SHADOWS.large,
+  },
+  modalTitle: {
+    ...TYPOGRAPHY.h4,
+    color: COLORS.text,
+    fontWeight: "bold",
+    marginBottom: SPACING.sm,
+  },
+  modalDesc: {
+    ...TYPOGRAPHY.body2,
+    color: COLORS.textSecondary,
+    marginBottom: SPACING.md,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: COLORS.divider,
+    borderRadius: BORDER_RADIUS.md,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    marginBottom: SPACING.md,
+    backgroundColor: COLORS.backgroundSecondary,
+    color: COLORS.text,
+  },
+  modalActions: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: SPACING.sm,
+  },
+  modalButton: {
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.sm,
+    borderRadius: BORDER_RADIUS.md,
+  },
+  cancelButton: {
+    backgroundColor: COLORS.backgroundSecondary,
+    borderWidth: 1,
+    borderColor: COLORS.divider,
+  },
+  deleteButton: {
+    backgroundColor: COLORS.error,
+  },
+  cancelText: {
+    ...TYPOGRAPHY.body2,
+    color: COLORS.text,
+    fontWeight: "600",
+  },
+  deleteText: {
+    ...TYPOGRAPHY.body2,
+    color: COLORS.card,
+    fontWeight: "700",
   },
   emptyContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     paddingHorizontal: SPACING.xl,
   },
   emptyTitle: {
     ...TYPOGRAPHY.h3,
     color: COLORS.text,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginTop: SPACING.lg,
     marginBottom: SPACING.sm,
   },
   emptySubtitle: {
     ...TYPOGRAPHY.body2,
     color: COLORS.textSecondary,
-    textAlign: 'center',
+    textAlign: "center",
     lineHeight: 22,
     marginBottom: SPACING.xl,
   },
@@ -578,7 +826,7 @@ const styles = StyleSheet.create({
   shopButtonText: {
     ...TYPOGRAPHY.body1,
     color: COLORS.card,
-    fontWeight: '600',
+    fontWeight: "600",
   },
 });
 

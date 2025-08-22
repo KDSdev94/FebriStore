@@ -98,8 +98,8 @@ const LoadingScreen = ({ navigation }) => {
 
       {/* Footer */}
       <View style={styles.footer}>
-        <Text style={styles.footerText}>© 2024 Febri Store</Text>
-        <Text style={styles.versionText}>Versi 1.0.0</Text>
+        <Text style={styles.footerText}>© 2025 Febri Store</Text>
+        <Text style={styles.versionText}>Versi 2.0.0</Text>
       </View>
     </LinearGradient>
   );

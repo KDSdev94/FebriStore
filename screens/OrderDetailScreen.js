@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -9,22 +9,57 @@ import {
   Image,
   Alert,
   Modal,
-} from 'react-native';
-import { MaterialCommunityIcons, Feather } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
-import { useOrder } from '../contexts/OrderContext';
-import { useAuth } from '../contexts/AuthContext';
-import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '../utils/constants';
+} from "react-native";
+import { MaterialCommunityIcons, Feather } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
+import { useOrder } from "../contexts/OrderContext";
+import { useAuth } from "../contexts/AuthContext";
+import {
+  COLORS,
+  TYPOGRAPHY,
+  SPACING,
+  BORDER_RADIUS,
+  SHADOWS,
+} from "../utils/constants";
+import { settingsService } from "../services/settingsService";
 
 const OrderDetailScreen = ({ navigation, route }) => {
   const { order: initialOrder } = route.params;
-  const { updateOrderStatus, updatePaymentProof, getStatusInfo, getOrderById } = useOrder();
+  const { updateOrderStatus, updatePaymentProof, getStatusInfo, getOrderById } =
+    useOrder();
   const { user } = useAuth();
-  
+
   const [currentOrder, setCurrentOrder] = useState(initialOrder);
-  const [paymentProof, setPaymentProof] = useState(initialOrder.paymentProof || null);
+  const [paymentProof, setPaymentProof] = useState(
+    initialOrder.paymentProof || null
+  );
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [uploadingProof, setUploadingProof] = useState(false);
+
+  // Admin bank account for transfer instructions
+  const [adminBank, setAdminBank] = useState(null);
+  const [loadingBank, setLoadingBank] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    const loadBank = async () => {
+      try {
+        setLoadingBank(true);
+        const res = await settingsService.getAdminBankAccount();
+        if (mounted && res.success) {
+          setAdminBank(res.bankAccount || null);
+        }
+      } catch (e) {
+        console.warn("Gagal memuat rekening admin", e);
+      } finally {
+        mounted && setLoadingBank(false);
+      }
+    };
+    loadBank();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   // ✅ Update order data when params change or from context
   useEffect(() => {
@@ -36,30 +71,30 @@ const OrderDetailScreen = ({ navigation, route }) => {
   }, [route.params.order, getOrderById, initialOrder.id]);
 
   const formatPrice = (price) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
+    return new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
       minimumFractionDigits: 0,
     }).format(price);
   };
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('id-ID', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+    return date.toLocaleDateString("id-ID", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
   const formatDateOnly = (dateString) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('id-ID', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric'
+    return date.toLocaleDateString("id-ID", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
     });
   };
 
@@ -67,35 +102,41 @@ const OrderDetailScreen = ({ navigation, route }) => {
 
   const getTrackingSteps = () => {
     // Different steps for COD vs Transfer
-    if (currentOrder.paymentMethod === 'cod') {
+    if (currentOrder.paymentMethod === "cod") {
       const codSteps = [
-        { 
-          id: 'cod_confirmed', 
-          label: 'Pesanan COD Dikonfirmasi', 
-          icon: 'cash-check',
-          description: 'Pesanan COD telah dikonfirmasi'
+        {
+          id: "cod_confirmed",
+          label: "Pesanan COD Dikonfirmasi",
+          icon: "cash-check",
+          description: "Pesanan COD telah dikonfirmasi",
         },
-        { 
-          id: 'cod_processing', 
-          label: 'Sedang Diproses', 
-          icon: 'package-variant',
-          description: 'Pesanan sedang disiapkan'
+        {
+          id: "cod_processing",
+          label: "Sedang Diproses",
+          icon: "package-variant",
+          description: "Pesanan sedang disiapkan",
         },
-        { 
-          id: 'cod_shipped', 
-          label: 'Dalam Pengiriman', 
-          icon: 'truck-delivery',
-          description: 'Pesanan sedang dikirim. Klik "Pesanan Diterima" setelah menerima barang.'
+        {
+          id: "cod_shipped",
+          label: "Dalam Pengiriman",
+          icon: "truck-delivery",
+          description:
+            'Pesanan sedang dikirim. Klik "Pesanan Diterima" setelah menerima barang.',
         },
-        { 
-          id: 'cod_delivered', 
-          label: 'Selesai & Dibayar', 
-          icon: 'cash-check',
-          description: 'Pesanan diterima dan pembayaran COD selesai'
+        {
+          id: "cod_delivered",
+          label: "Selesai & Dibayar",
+          icon: "cash-check",
+          description: "Pesanan diterima dan pembayaran COD selesai",
         },
       ];
 
-      const codStatusOrder = ['cod_confirmed', 'cod_processing', 'cod_shipped', 'cod_delivered'];
+      const codStatusOrder = [
+        "cod_confirmed",
+        "cod_processing",
+        "cod_shipped",
+        "cod_delivered",
+      ];
       const currentIndex = codStatusOrder.indexOf(currentOrder.status);
 
       return codSteps.map((step, index) => ({
@@ -106,51 +147,60 @@ const OrderDetailScreen = ({ navigation, route }) => {
     } else {
       // Transfer Bank steps
       const transferSteps = [
-        { 
-          id: 'pending', 
-          label: 'Pesanan Dibuat', 
-          icon: 'file-document-outline',
-          description: 'Pesanan telah dibuat'
+        {
+          id: "pending",
+          label: "Pesanan Dibuat",
+          icon: "file-document-outline",
+          description: "Pesanan telah dibuat",
         },
-        { 
-          id: 'pending_payment', 
-          label: 'Menunggu Pembayaran', 
-          icon: 'clock-outline',
-          description: 'Pesanan menunggu pembayaran'
+        {
+          id: "pending_payment",
+          label: "Menunggu Pembayaran",
+          icon: "clock-outline",
+          description: "Pesanan menunggu pembayaran",
         },
-        { 
-          id: 'pending_verification', 
-          label: 'Menunggu Verifikasi', 
-          icon: 'account-check-outline',
-          description: 'Bukti pembayaran menunggu verifikasi admin'
+        {
+          id: "pending_verification",
+          label: "Menunggu Verifikasi",
+          icon: "account-check-outline",
+          description: "Bukti pembayaran menunggu verifikasi admin",
         },
-        { 
-          id: 'processing', 
-          label: 'Sedang Diproses', 
-          icon: 'package-variant',
-          description: 'Pesanan sedang disiapkan'
+        {
+          id: "processing",
+          label: "Sedang Diproses",
+          icon: "package-variant",
+          description: "Pesanan sedang disiapkan",
         },
-        { 
-          id: 'shipped', 
-          label: 'Dalam Pengiriman', 
-          icon: 'truck-delivery',
-          description: 'Pesanan sedang dikirim. Klik "Pesanan Diterima" setelah menerima barang.'
+        {
+          id: "shipped",
+          label: "Dalam Pengiriman",
+          icon: "truck-delivery",
+          description:
+            'Pesanan sedang dikirim. Klik "Pesanan Diterima" setelah menerima barang.',
         },
-        { 
-          id: 'delivered', 
-          label: 'Pesanan Selesai', 
-          icon: 'check-all',
-          description: 'Pesanan telah diterima'
+        {
+          id: "delivered",
+          label: "Pesanan Selesai",
+          icon: "check-all",
+          description: "Pesanan telah diterima",
         },
-        { 
-          id: 'completed', 
-          label: 'Transaksi Selesai', 
-          icon: 'check-circle',
-          description: 'Transaksi telah selesai sepenuhnya'
+        {
+          id: "completed",
+          label: "Transaksi Selesai",
+          icon: "check-circle",
+          description: "Transaksi telah selesai sepenuhnya",
         },
       ];
 
-      const transferStatusOrder = ['pending', 'pending_payment', 'pending_verification', 'processing', 'shipped', 'delivered', 'completed'];
+      const transferStatusOrder = [
+        "pending",
+        "pending_payment",
+        "pending_verification",
+        "processing",
+        "shipped",
+        "delivered",
+        "completed",
+      ];
       const currentIndex = transferStatusOrder.indexOf(currentOrder.status);
 
       return transferSteps.map((step, index) => ({
@@ -163,20 +213,20 @@ const OrderDetailScreen = ({ navigation, route }) => {
 
   const showImagePickerOptions = () => {
     Alert.alert(
-      'Pilih Sumber Gambar',
-      'Pilih dari mana Anda ingin mengambil foto bukti pembayaran',
+      "Pilih Sumber Gambar",
+      "Pilih dari mana Anda ingin mengambil foto bukti pembayaran",
       [
         {
-          text: 'Kamera',
-          onPress: () => handleImagePicker('camera'),
+          text: "Kamera",
+          onPress: () => handleImagePicker("camera"),
         },
         {
-          text: 'Galeri',
-          onPress: () => handleImagePicker('gallery'),
+          text: "Galeri",
+          onPress: () => handleImagePicker("gallery"),
         },
         {
-          text: 'Batal',
-          style: 'cancel',
+          text: "Batal",
+          style: "cancel",
         },
       ]
     );
@@ -185,17 +235,20 @@ const OrderDetailScreen = ({ navigation, route }) => {
   const handleImagePicker = async (source) => {
     try {
       let permissionResult;
-      
-      if (source === 'camera') {
+
+      if (source === "camera") {
         permissionResult = await ImagePicker.requestCameraPermissionsAsync();
       } else {
-        permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        permissionResult =
+          await ImagePicker.requestMediaLibraryPermissionsAsync();
       }
 
-      if (permissionResult.status !== 'granted') {
+      if (permissionResult.status !== "granted") {
         Alert.alert(
-          'Izin Diperlukan', 
-          `Izin akses ${source === 'camera' ? 'kamera' : 'galeri'} diperlukan untuk upload bukti pembayaran`
+          "Izin Diperlukan",
+          `Izin akses ${
+            source === "camera" ? "kamera" : "galeri"
+          } diperlukan untuk upload bukti pembayaran`
         );
         return;
       }
@@ -214,7 +267,7 @@ const OrderDetailScreen = ({ navigation, route }) => {
       };
 
       let result;
-      if (source === 'camera') {
+      if (source === "camera") {
         result = await ImagePicker.launchCameraAsync(imagePickerOptions);
       } else {
         result = await ImagePicker.launchImageLibraryAsync(imagePickerOptions);
@@ -222,45 +275,53 @@ const OrderDetailScreen = ({ navigation, route }) => {
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const selectedImage = result.assets[0];
-        
+
         try {
           // Update payment proof in order context
-          const uploadResult = await updatePaymentProof(currentOrder.id, selectedImage.uri);
-          
+          const uploadResult = await updatePaymentProof(
+            currentOrder.id,
+            selectedImage.uri
+          );
+
           if (uploadResult.success) {
             setPaymentProof(selectedImage.uri);
             setShowPaymentModal(false);
-            
+
             Alert.alert(
-              'Berhasil', 
+              "Berhasil",
               'Bukti pembayaran berhasil diupload. Status pesanan telah diperbarui menjadi "Menunggu Verifikasi Admin". Admin akan memverifikasi pembayaran Anda.',
-              [{ 
-                text: 'OK',
-                onPress: () => {
-                  // ✅ Navigate back with updated order data
-                  navigation.navigate('OrderDetail', { 
-                    order: uploadResult.updatedOrder || {
-                      ...currentOrder, 
-                      status: 'pending_verification', 
-                      paymentProof: selectedImage.uri,
-                      paymentStatus: 'proof_uploaded',
-                      paymentProofUploadedAt: new Date().toISOString()
-                    }
-                  });
-                }
-              }]
+              [
+                {
+                  text: "OK",
+                  onPress: () => {
+                    // ✅ Navigate back with updated order data
+                    navigation.navigate("OrderDetail", {
+                      order: uploadResult.updatedOrder || {
+                        ...currentOrder,
+                        status: "pending_verification",
+                        paymentProof: selectedImage.uri,
+                        paymentStatus: "proof_uploaded",
+                        paymentProofUploadedAt: new Date().toISOString(),
+                      },
+                    });
+                  },
+                },
+              ]
             );
           } else {
-            Alert.alert('Error', uploadResult.error || 'Gagal mengupload bukti pembayaran');
+            Alert.alert(
+              "Error",
+              uploadResult.error || "Gagal mengupload bukti pembayaran"
+            );
           }
         } catch (error) {
-          console.error('Error updating payment proof:', error);
-          Alert.alert('Error', 'Gagal mengupload bukti pembayaran');
+          console.error("Error updating payment proof:", error);
+          Alert.alert("Error", "Gagal mengupload bukti pembayaran");
         }
       }
     } catch (error) {
-      console.error('Error with image picker:', error);
-      Alert.alert('Error', 'Terjadi kesalahan saat memilih gambar');
+      console.error("Error with image picker:", error);
+      Alert.alert("Error", "Terjadi kesalahan saat memilih gambar");
     } finally {
       setUploadingProof(false);
     }
@@ -268,53 +329,77 @@ const OrderDetailScreen = ({ navigation, route }) => {
 
   const handleConfirmReceived = async () => {
     Alert.alert(
-      'Konfirmasi Penerimaan Pesanan',
-      'Apakah Anda sudah menerima pesanan ini dengan baik?',
+      "Konfirmasi Penerimaan Pesanan",
+      "Apakah Anda sudah menerima pesanan ini dengan baik?",
       [
-        { text: 'Belum', style: 'cancel' },
+        { text: "Belum", style: "cancel" },
         {
-          text: 'Sudah Diterima',
+          text: "Sudah Diterima",
           onPress: async () => {
             try {
-              // Determine the final status based on payment method
-              const finalStatus = currentOrder.paymentMethod === 'cod' ? 'cod_delivered' : 'delivered';
-              
-              const result = await updateOrderStatus(currentOrder.id, finalStatus);
-              
+              // Determine final status and additional fields
+              const isCOD = currentOrder.paymentMethod === "cod";
+              const newStatus = isCOD ? "cod_delivered" : "completed";
+              const additionalData = isCOD
+                ? { codDeliveredAt: new Date().toISOString() }
+                : {
+                    deliveredAt: new Date().toISOString(),
+                    completedAt: new Date().toISOString(),
+                    sellerTransferStatus: "pending",
+                  };
+
+              const result = await updateOrderStatus(
+                currentOrder.id,
+                newStatus,
+                additionalData
+              );
+
               if (result.success) {
                 Alert.alert(
-                  'Berhasil',
-                  currentOrder.paymentMethod === 'cod' 
-                    ? 'Pesanan telah dikonfirmasi diterima. Terima kasih telah berbelanja!'
-                    : 'Pesanan telah dikonfirmasi diterima. Terima kasih telah berbelanja!',
-                  [{ 
-                    text: 'OK', 
-                    onPress: () => {
-                      // Navigate back and refresh
-                      navigation.goBack();
-                    }
-                  }]
+                  "Berhasil",
+                  currentOrder.paymentMethod === "cod"
+                    ? "Pesanan telah dikonfirmasi diterima. Terima kasih telah berbelanja!"
+                    : "Pesanan telah dikonfirmasi diterima. Terima kasih telah berbelanja!",
+                  [
+                    {
+                      text: "OK",
+                      onPress: () => {
+                        // Navigate back and refresh
+                        navigation.goBack();
+                      },
+                    },
+                  ]
                 );
               } else {
-                Alert.alert('Error', result.error || 'Gagal mengkonfirmasi penerimaan pesanan');
+                Alert.alert(
+                  "Error",
+                  result.error || "Gagal mengkonfirmasi penerimaan pesanan"
+                );
               }
             } catch (error) {
-              console.error('Error confirming order received:', error);
-              Alert.alert('Error', 'Terjadi kesalahan saat mengkonfirmasi penerimaan pesanan');
+              console.error("Error confirming order received:", error);
+              Alert.alert(
+                "Error",
+                "Terjadi kesalahan saat mengkonfirmasi penerimaan pesanan"
+              );
             }
-          }
-        }
+          },
+        },
       ]
     );
   };
 
   const renderHeader = () => (
     <View style={styles.header}>
-      <TouchableOpacity 
+      <TouchableOpacity
         style={styles.backButton}
         onPress={() => navigation.goBack()}
       >
-        <MaterialCommunityIcons name="arrow-left" size={24} color={COLORS.text} />
+        <MaterialCommunityIcons
+          name="arrow-left"
+          size={24}
+          color={COLORS.text}
+        />
       </TouchableOpacity>
       <Text style={styles.headerTitle}>Detail Pesanan</Text>
       <View style={styles.placeholder} />
@@ -324,21 +409,29 @@ const OrderDetailScreen = ({ navigation, route }) => {
   const renderOrderInfo = () => (
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>Informasi Pesanan</Text>
-      
+
       <View style={styles.infoRow}>
         <Text style={styles.infoLabel}>ID Pesanan</Text>
         <Text style={styles.infoValue}>#{currentOrder.orderNumber}</Text>
       </View>
-      
+
       <View style={styles.infoRow}>
         <Text style={styles.infoLabel}>Tanggal Pesanan</Text>
-        <Text style={styles.infoValue}>{formatDate(currentOrder.createdAt)}</Text>
+        <Text style={styles.infoValue}>
+          {formatDate(currentOrder.createdAt)}
+        </Text>
       </View>
-      
+
       <View style={styles.infoRow}>
         <Text style={styles.infoLabel}>Status Pesanan</Text>
-        <View style={[styles.statusBadge, { backgroundColor: statusInfo.color }]}>
-          <MaterialCommunityIcons name={statusInfo.icon} size={16} color={COLORS.card} />
+        <View
+          style={[styles.statusBadge, { backgroundColor: statusInfo.color }]}
+        >
+          <MaterialCommunityIcons
+            name={statusInfo.icon}
+            size={16}
+            color={COLORS.card}
+          />
           <Text style={styles.statusText}>{statusInfo.label}</Text>
         </View>
       </View>
@@ -348,93 +441,169 @@ const OrderDetailScreen = ({ navigation, route }) => {
   const renderPaymentStatus = () => (
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>Status Pembayaran</Text>
-      
+
       <View style={styles.paymentStatusContainer}>
         <View style={styles.paymentInfo}>
-          <MaterialCommunityIcons 
+          <MaterialCommunityIcons
             name={
-              (currentOrder.status === 'pending_payment' || currentOrder.status === 'pending') ? 'clock-outline' : 
-              currentOrder.status === 'pending_verification' ? 'account-check-outline' : 
-              (currentOrder.status === 'cod_confirmed' || currentOrder.status === 'cod_processing' || currentOrder.status === 'cod_shipped') ? 'cash' :
-              currentOrder.status === 'cod_delivered' ? 'cash-check' :
-              'check-circle'
-            } 
-            size={24} 
+              currentOrder.status === "pending_payment" ||
+              currentOrder.status === "pending"
+                ? "clock-outline"
+                : currentOrder.status === "pending_verification"
+                ? "account-check-outline"
+                : currentOrder.status === "cod_confirmed" ||
+                  currentOrder.status === "cod_processing" ||
+                  currentOrder.status === "cod_shipped"
+                ? "cash"
+                : currentOrder.status === "cod_delivered"
+                ? "cash-check"
+                : "check-circle"
+            }
+            size={24}
             color={
-              (currentOrder.status === 'pending_payment' || currentOrder.status === 'pending') ? COLORS.warning : 
-              currentOrder.status === 'pending_verification' ? '#FF6B35' : 
-              (currentOrder.status === 'cod_confirmed' || currentOrder.status === 'cod_processing' || currentOrder.status === 'cod_shipped') ? COLORS.info :
-              COLORS.success
-            } 
+              currentOrder.status === "pending_payment" ||
+              currentOrder.status === "pending"
+                ? COLORS.warning
+                : currentOrder.status === "pending_verification"
+                ? "#FF6B35"
+                : currentOrder.status === "cod_confirmed" ||
+                  currentOrder.status === "cod_processing" ||
+                  currentOrder.status === "cod_shipped"
+                ? COLORS.info
+                : COLORS.success
+            }
           />
           <View style={styles.paymentDetails}>
             <Text style={styles.paymentStatusText}>
-              {(currentOrder.status === 'pending_payment' || currentOrder.status === 'pending') ? 'Menunggu Pembayaran' : 
-               currentOrder.status === 'pending_verification' ? 'Menunggu Verifikasi Admin' :
-               (currentOrder.status === 'cod_confirmed' || currentOrder.status === 'cod_processing' || currentOrder.status === 'cod_shipped') ? 'Bayar Saat Terima Barang' :
-               currentOrder.status === 'cod_delivered' ? 'Pembayaran COD Selesai' :
-               'Pembayaran Dikonfirmasi'}
+              {currentOrder.status === "pending_payment" ||
+              currentOrder.status === "pending"
+                ? "Menunggu Pembayaran"
+                : currentOrder.status === "pending_verification"
+                ? "Menunggu Verifikasi Admin"
+                : currentOrder.status === "cod_confirmed" ||
+                  currentOrder.status === "cod_processing" ||
+                  currentOrder.status === "cod_shipped"
+                ? "Bayar Saat Terima Barang"
+                : currentOrder.status === "cod_delivered"
+                ? "Pembayaran COD Selesai"
+                : "Pembayaran Dikonfirmasi"}
             </Text>
             <Text style={styles.paymentMethod}>
-              Metode: {currentOrder.paymentMethod === 'transfer' ? 'Transfer Bank' : 'Bayar di Tempat (COD)'}
+              Metode:{" "}
+              {currentOrder.paymentMethod === "transfer"
+                ? "Transfer Bank"
+                : "Bayar di Tempat (COD)"}
             </Text>
           </View>
         </View>
 
-        {currentOrder.paymentMethod === 'transfer' && (currentOrder.status === 'pending_payment' || currentOrder.status === 'pending') && (
-          <View style={styles.bankInfo}>
-            <Text style={styles.bankInfoTitle}>Informasi Transfer:</Text>
-            <Text style={styles.bankDetails}>Bank BCA</Text>
-            <Text style={styles.bankDetails}>No. Rekening: 1234567890</Text>
-            <Text style={styles.bankDetails}>Atas Nama: Admin Febri Store</Text>
-            <Text style={styles.totalTransfer}>Total: {formatPrice(currentOrder.totalAmount)}</Text>
-          </View>
-        )}
+        {currentOrder.paymentMethod === "transfer" &&
+          (currentOrder.status === "pending_payment" ||
+            currentOrder.status === "pending") && (
+            <View style={styles.bankInfo}>
+              <Text style={styles.bankInfoTitle}>Informasi Transfer:</Text>
+              {loadingBank ? (
+                <Text style={styles.bankDetails}>Memuat rekening admin...</Text>
+              ) : adminBank ? (
+                <>
+                  <Text style={styles.bankDetails}>{adminBank.bankName}</Text>
+                  <Text style={styles.bankDetails}>
+                    No. Rekening: {adminBank.accountNumber}
+                  </Text>
+                  <Text style={styles.bankDetails}>
+                    Atas Nama: {adminBank.accountHolderName}
+                  </Text>
+                </>
+              ) : (
+                <Text style={styles.bankDetails}>
+                  Rekening admin belum diatur. Silakan hubungi admin.
+                </Text>
+              )}
+              <Text style={styles.totalTransfer}>
+                Total: {formatPrice(currentOrder.totalAmount)}
+              </Text>
+            </View>
+          )}
 
-        {currentOrder.paymentMethod === 'cod' && (
+        {currentOrder.paymentMethod === "cod" && (
           <View style={styles.codInfo}>
             <Text style={styles.codInfoTitle}>Informasi COD:</Text>
             <View style={styles.codDetails}>
-              <MaterialCommunityIcons name="cash" size={16} color={COLORS.success} />
-              <Text style={styles.codText}>Bayar langsung ke penjual saat barang diterima</Text>
+              <MaterialCommunityIcons
+                name="cash"
+                size={16}
+                color={COLORS.success}
+              />
+              <Text style={styles.codText}>
+                Bayar langsung ke penjual saat barang diterima
+              </Text>
             </View>
             <View style={styles.codDetails}>
-              <MaterialCommunityIcons name="gift-outline" size={16} color={COLORS.success} />
-              <Text style={styles.codText}>GRATIS biaya admin (hemat Rp 1.500)</Text>
+              <MaterialCommunityIcons
+                name="gift-outline"
+                size={16}
+                color={COLORS.success}
+              />
+              <Text style={styles.codText}>
+                GRATIS biaya admin (hemat Rp 1.500)
+              </Text>
             </View>
-            <Text style={styles.totalCOD}>Total Bayar: {formatPrice(currentOrder.subtotal)}</Text>
+            <Text style={styles.totalCOD}>
+              Total Bayar: {formatPrice(currentOrder.subtotal)}
+            </Text>
           </View>
         )}
 
-        {currentOrder.paymentMethod === 'transfer' && (
+        {currentOrder.paymentMethod === "transfer" && (
           <View style={styles.paymentProofSection}>
             <Text style={styles.paymentProofTitle}>Bukti Pembayaran:</Text>
             {paymentProof ? (
               <View style={styles.proofContainer}>
-                <Image source={{ uri: paymentProof }} style={styles.proofImage} />
+                <Image
+                  source={{ uri: paymentProof }}
+                  style={styles.proofImage}
+                />
                 <Text style={styles.proofStatus}>
-                  {(currentOrder.status === 'pending_payment' || currentOrder.status === 'pending') ? 'Belum diupload' : 
-                   currentOrder.status === 'pending_verification' ? 'Menunggu verifikasi admin' : 
-                   'Terverifikasi'}
+                  {currentOrder.status === "pending_payment" ||
+                  currentOrder.status === "pending"
+                    ? "Belum diupload"
+                    : currentOrder.status === "pending_verification"
+                    ? "Menunggu verifikasi admin"
+                    : "Terverifikasi"}
                 </Text>
-                {(currentOrder.status === 'pending_payment' || currentOrder.status === 'pending' || currentOrder.status === 'pending_verification') && (
-                  <TouchableOpacity 
+                {(currentOrder.status === "pending_payment" ||
+                  currentOrder.status === "pending" ||
+                  currentOrder.status === "pending_verification") && (
+                  <TouchableOpacity
                     style={styles.changeProofButton}
                     onPress={showImagePickerOptions}
                   >
-                    <MaterialCommunityIcons name="camera-plus" size={16} color={COLORS.primary} />
-                    <Text style={styles.changeProofText}>Ganti Bukti Pembayaran</Text>
+                    <MaterialCommunityIcons
+                      name="camera-plus"
+                      size={16}
+                      color={COLORS.primary}
+                    />
+                    <Text style={styles.changeProofText}>
+                      Ganti Bukti Pembayaran
+                    </Text>
                   </TouchableOpacity>
                 )}
               </View>
             ) : (
-              (currentOrder.status === 'pending_payment' || currentOrder.status === 'pending') && (
-                <TouchableOpacity 
+              (currentOrder.status === "pending_payment" ||
+                currentOrder.status === "pending") && (
+                <TouchableOpacity
                   style={styles.uploadButton}
                   onPress={showImagePickerOptions}
                 >
-                  <MaterialCommunityIcons name="camera-plus" size={20} color={COLORS.primary} />
-                  <Text style={styles.uploadButtonText}>Upload Bukti Pembayaran</Text>
+                  <MaterialCommunityIcons
+                    name="camera-plus"
+                    size={20}
+                    color={COLORS.primary}
+                  />
+                  <Text style={styles.uploadButtonText}>
+                    Upload Bukti Pembayaran
+                  </Text>
                 </TouchableOpacity>
               )
             )}
@@ -447,17 +616,27 @@ const OrderDetailScreen = ({ navigation, route }) => {
   const renderShippingAddress = () => (
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>Alamat Pengiriman</Text>
-      
+
       <View style={styles.addressContainer}>
         <View style={styles.addressHeader}>
-          <MaterialCommunityIcons name="map-marker" size={20} color={COLORS.primary} />
-          <Text style={styles.addressName}>{currentOrder.shippingAddress.name}</Text>
+          <MaterialCommunityIcons
+            name="map-marker"
+            size={20}
+            color={COLORS.primary}
+          />
+          <Text style={styles.addressName}>
+            {currentOrder.shippingAddress.name}
+          </Text>
         </View>
-        
-        <Text style={styles.addressPhone}>{currentOrder.shippingAddress.phone}</Text>
+
+        <Text style={styles.addressPhone}>
+          {currentOrder.shippingAddress.phone}
+        </Text>
         <Text style={styles.addressText}>
-          {currentOrder.shippingAddress.address}, {currentOrder.shippingAddress.city}
-          {currentOrder.shippingAddress.postalCode && `, ${currentOrder.shippingAddress.postalCode}`}
+          {currentOrder.shippingAddress.address},{" "}
+          {currentOrder.shippingAddress.city}
+          {currentOrder.shippingAddress.postalCode &&
+            `, ${currentOrder.shippingAddress.postalCode}`}
         </Text>
       </View>
     </View>
@@ -466,63 +645,82 @@ const OrderDetailScreen = ({ navigation, route }) => {
   const renderOrderItems = () => {
     // Group items by seller
     const itemsBySeller = currentOrder.items.reduce((acc, item) => {
-      const sellerId = item.sellerId || 'unknown';
+      const sellerId = item.sellerId || "unknown";
       // Prioritize storeName over sellerName for consistency with product detail
-      const sellerName = item.storeName || item.sellerName || 'Toko Tidak Dikenal';
-      
+      const sellerName =
+        item.storeName || item.sellerName || "Toko Tidak Dikenal";
+
       if (!acc[sellerId]) {
         acc[sellerId] = {
           sellerName,
-          items: []
+          items: [],
         };
       }
-      
+
       acc[sellerId].items.push(item);
       return acc;
     }, {});
 
     return (
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Item Pesanan ({currentOrder.itemCount} produk)</Text>
-        
+        <Text style={styles.sectionTitle}>
+          Item Pesanan ({currentOrder.itemCount} produk)
+        </Text>
+
         {Object.entries(itemsBySeller).map(([sellerId, sellerData]) => (
           <View key={sellerId} style={styles.sellerGroup}>
             <View style={styles.sellerHeader}>
-              <MaterialCommunityIcons name="store" size={20} color={COLORS.primary} />
+              <MaterialCommunityIcons
+                name="store"
+                size={20}
+                color={COLORS.primary}
+              />
               <Text style={styles.sellerName}>{sellerData.sellerName}</Text>
-              <Text style={styles.itemCount}>({sellerData.items.length} produk)</Text>
+              <Text style={styles.itemCount}>
+                ({sellerData.items.length} produk)
+              </Text>
             </View>
-            
+
             {sellerData.items.map((item, index) => (
               <View key={`${item.productId}-${index}`} style={styles.orderItem}>
-                <Image 
-                  source={{ uri: item.productImage }} 
-                  style={styles.itemImage} 
+                <Image
+                  source={{ uri: item.productImage }}
+                  style={styles.itemImage}
                 />
-                
+
                 <View style={styles.itemDetails}>
-                  <Text style={styles.itemName} numberOfLines={2}>{item.productName}</Text>
-                  
+                  <Text style={styles.itemName} numberOfLines={2}>
+                    {item.productName}
+                  </Text>
+
                   {item.selectedVariant && (
                     <Text style={styles.itemVariant}>
                       Varian: {item.selectedVariant.name}
                     </Text>
                   )}
-                  
+
                   <View style={styles.itemPriceRow}>
-                    <Text style={styles.itemPrice}>{formatPrice(item.price)}</Text>
+                    <Text style={styles.itemPrice}>
+                      {formatPrice(item.price)}
+                    </Text>
                     <Text style={styles.itemQuantity}>x{item.quantity}</Text>
                   </View>
                 </View>
-                
-                <Text style={styles.itemTotal}>{formatPrice(item.totalPrice)}</Text>
+
+                <Text style={styles.itemTotal}>
+                  {formatPrice(item.totalPrice)}
+                </Text>
               </View>
             ))}
-            
+
             <View style={styles.sellerSummary}>
               <Text style={styles.sellerSummaryText}>
-                Subtotal {sellerData.sellerName}: {formatPrice(
-                  sellerData.items.reduce((sum, item) => sum + item.totalPrice, 0)
+                Subtotal {sellerData.sellerName}:{" "}
+                {formatPrice(
+                  sellerData.items.reduce(
+                    (sum, item) => sum + item.totalPrice,
+                    0
+                  )
                 )}
               </Text>
             </View>
@@ -535,31 +733,40 @@ const OrderDetailScreen = ({ navigation, route }) => {
   const renderOrderSummary = () => (
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>Ringkasan Pembayaran</Text>
-      
-      <View style={styles.summaryRow}>
-        <Text style={styles.summaryLabel}>Subtotal ({currentOrder.itemCount} item)</Text>
-        <Text style={styles.summaryValue}>{formatPrice(currentOrder.subtotal)}</Text>
-      </View>
-      
+
       <View style={styles.summaryRow}>
         <Text style={styles.summaryLabel}>
-          Biaya Admin {currentOrder.paymentMethod === 'cod' ? '(Gratis untuk COD)' : ''}
+          Subtotal ({currentOrder.itemCount} item)
         </Text>
-        <Text style={[
-          styles.summaryValue, 
-          currentOrder.paymentMethod === 'cod' && styles.freePrice
-        ]}>
-          {currentOrder.paymentMethod === 'cod' ? 'GRATIS' : formatPrice(currentOrder.adminFee || 1500)}
+        <Text style={styles.summaryValue}>
+          {formatPrice(currentOrder.subtotal)}
         </Text>
       </View>
-      
+
+      <View style={styles.summaryRow}>
+        <Text style={styles.summaryLabel}>
+          Biaya Admin{" "}
+          {currentOrder.paymentMethod === "cod" ? "(Gratis untuk COD)" : ""}
+        </Text>
+        <Text
+          style={[
+            styles.summaryValue,
+            currentOrder.paymentMethod === "cod" && styles.freePrice,
+          ]}
+        >
+          {currentOrder.paymentMethod === "cod"
+            ? "GRATIS"
+            : formatPrice(currentOrder.adminFee || 1500)}
+        </Text>
+      </View>
+
       <View style={styles.divider} />
-      
+
       <View style={styles.totalRow}>
         <Text style={styles.totalLabel}>Total Pembayaran</Text>
         <Text style={styles.totalValue}>
           {formatPrice(
-            currentOrder.paymentMethod === 'cod' 
+            currentOrder.paymentMethod === "cod"
               ? currentOrder.subtotal // COD hanya subtotal tanpa biaya admin
               : currentOrder.totalAmount // Transfer dengan biaya admin
           )}
@@ -571,42 +778,58 @@ const OrderDetailScreen = ({ navigation, route }) => {
   const renderTrackingStatus = () => (
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>Status Pengiriman</Text>
-      
+
       <View style={styles.trackingContainer}>
         {getTrackingSteps().map((step, index) => (
           <View key={step.id} style={styles.trackingStep}>
             <View style={styles.trackingIconContainer}>
-              <View style={[
-                styles.trackingIcon,
-                { 
-                  backgroundColor: step.completed ? COLORS.primary : COLORS.backgroundSecondary,
-                  borderColor: step.active ? COLORS.primary : COLORS.divider
-                }
-              ]}>
-                <MaterialCommunityIcons 
-                  name={step.icon} 
-                  size={16} 
-                  color={step.completed ? COLORS.card : COLORS.textSecondary} 
+              <View
+                style={[
+                  styles.trackingIcon,
+                  {
+                    backgroundColor: step.completed
+                      ? COLORS.primary
+                      : COLORS.backgroundSecondary,
+                    borderColor: step.active ? COLORS.primary : COLORS.divider,
+                  },
+                ]}
+              >
+                <MaterialCommunityIcons
+                  name={step.icon}
+                  size={16}
+                  color={step.completed ? COLORS.card : COLORS.textSecondary}
                 />
               </View>
               {index < getTrackingSteps().length - 1 && (
-                <View style={[
-                  styles.trackingLine,
-                  { backgroundColor: step.completed ? COLORS.primary : COLORS.divider }
-                ]} />
+                <View
+                  style={[
+                    styles.trackingLine,
+                    {
+                      backgroundColor: step.completed
+                        ? COLORS.primary
+                        : COLORS.divider,
+                    },
+                  ]}
+                />
               )}
             </View>
-            
+
             <View style={styles.trackingContent}>
-              <Text style={[
-                styles.trackingLabel,
-                { color: step.completed ? COLORS.text : COLORS.textSecondary }
-              ]}>
+              <Text
+                style={[
+                  styles.trackingLabel,
+                  {
+                    color: step.completed ? COLORS.text : COLORS.textSecondary,
+                  },
+                ]}
+              >
                 {step.label}
               </Text>
               <Text style={styles.trackingDescription}>{step.description}</Text>
               {step.active && (
-                <Text style={styles.trackingDate}>{formatDateOnly(currentOrder.updatedAt)}</Text>
+                <Text style={styles.trackingDate}>
+                  {formatDateOnly(currentOrder.updatedAt)}
+                </Text>
               )}
             </View>
           </View>
@@ -617,7 +840,7 @@ const OrderDetailScreen = ({ navigation, route }) => {
 
   const renderNotes = () => {
     if (!currentOrder.notes) return null;
-    
+
     return (
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Catatan</Text>
@@ -637,57 +860,85 @@ const OrderDetailScreen = ({ navigation, route }) => {
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Upload Bukti Pembayaran</Text>
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={() => setShowPaymentModal(false)}
               style={styles.modalCloseButton}
             >
-              <MaterialCommunityIcons name="close" size={24} color={COLORS.text} />
+              <MaterialCommunityIcons
+                name="close"
+                size={24}
+                color={COLORS.text}
+              />
             </TouchableOpacity>
           </View>
-          
+
           <Text style={styles.modalDescription}>
-            Silakan upload bukti transfer pembayaran Anda. Anda dapat memotong gambar sesuai keinginan untuk menampilkan bagian yang penting.
+            Silakan upload bukti transfer pembayaran Anda. Anda dapat memotong
+            gambar sesuai keinginan untuk menampilkan bagian yang penting.
           </Text>
 
           <View style={styles.uploadOptions}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.uploadOptionButton}
               onPress={() => {
                 setShowPaymentModal(false);
-                setTimeout(() => handleImagePicker('camera'), 300);
+                setTimeout(() => handleImagePicker("camera"), 300);
               }}
               disabled={uploadingProof}
             >
-              <MaterialCommunityIcons name="camera" size={32} color={COLORS.primary} />
+              <MaterialCommunityIcons
+                name="camera"
+                size={32}
+                color={COLORS.primary}
+              />
               <Text style={styles.uploadOptionText}>Ambil Foto</Text>
-              <Text style={styles.uploadOptionSubtext}>Foto langsung dengan kamera</Text>
+              <Text style={styles.uploadOptionSubtext}>
+                Foto langsung dengan kamera
+              </Text>
             </TouchableOpacity>
 
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.uploadOptionButton}
               onPress={() => {
                 setShowPaymentModal(false);
-                setTimeout(() => handleImagePicker('gallery'), 300);
+                setTimeout(() => handleImagePicker("gallery"), 300);
               }}
               disabled={uploadingProof}
             >
-              <MaterialCommunityIcons name="image" size={32} color={COLORS.primary} />
+              <MaterialCommunityIcons
+                name="image"
+                size={32}
+                color={COLORS.primary}
+              />
               <Text style={styles.uploadOptionText}>Pilih dari Galeri</Text>
-              <Text style={styles.uploadOptionSubtext}>Pilih foto yang sudah ada</Text>
+              <Text style={styles.uploadOptionSubtext}>
+                Pilih foto yang sudah ada
+              </Text>
             </TouchableOpacity>
           </View>
 
           {uploadingProof && (
             <View style={styles.uploadingContainer}>
-              <MaterialCommunityIcons name="loading" size={24} color={COLORS.primary} />
-              <Text style={styles.uploadingText}>Mengupload bukti pembayaran...</Text>
+              <MaterialCommunityIcons
+                name="loading"
+                size={24}
+                color={COLORS.primary}
+              />
+              <Text style={styles.uploadingText}>
+                Mengupload bukti pembayaran...
+              </Text>
             </View>
           )}
 
           <View style={styles.cropInfo}>
-            <MaterialCommunityIcons name="information" size={16} color={COLORS.textSecondary} />
+            <MaterialCommunityIcons
+              name="information"
+              size={16}
+              color={COLORS.textSecondary}
+            />
             <Text style={styles.cropInfoText}>
-              Setelah memilih foto, Anda dapat memotong dan menyesuaikan area yang ingin ditampilkan
+              Setelah memilih foto, Anda dapat memotong dan menyesuaikan area
+              yang ingin ditampilkan
             </Text>
           </View>
         </View>
@@ -697,16 +948,22 @@ const OrderDetailScreen = ({ navigation, route }) => {
 
   const renderBottomAction = () => {
     // Show "Pesanan Diterima" button when order is shipped (for both COD and Transfer)
-    const showReceiveButton = currentOrder.status === 'shipped' || currentOrder.status === 'cod_shipped';
-    
+    const showReceiveButton =
+      currentOrder.status === "shipped" ||
+      currentOrder.status === "cod_shipped";
+
     if (showReceiveButton) {
       return (
         <View style={styles.bottomActionContainer}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.receiveButton}
             onPress={handleConfirmReceived}
           >
-            <MaterialCommunityIcons name="check-circle" size={20} color={COLORS.card} />
+            <MaterialCommunityIcons
+              name="check-circle"
+              size={20}
+              color={COLORS.card}
+            />
             <Text style={styles.receiveButtonText}>Pesanan Diterima</Text>
           </TouchableOpacity>
         </View>
@@ -720,7 +977,7 @@ const OrderDetailScreen = ({ navigation, route }) => {
   return (
     <SafeAreaView style={styles.container}>
       {renderHeader()}
-      
+
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {renderOrderInfo()}
         {renderPaymentStatus()}
@@ -729,7 +986,7 @@ const OrderDetailScreen = ({ navigation, route }) => {
         {renderOrderSummary()}
         {renderTrackingStatus()}
         {renderNotes()}
-        
+
         <View style={styles.bottomSpacing} />
       </ScrollView>
 
@@ -747,8 +1004,8 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: COLORS.card,
     paddingTop: SPACING.xl,
     paddingHorizontal: SPACING.lg,
@@ -761,9 +1018,9 @@ const styles = StyleSheet.create({
   headerTitle: {
     ...TYPOGRAPHY.h3,
     color: COLORS.text,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     flex: 1,
-    textAlign: 'center',
+    textAlign: "center",
   },
   placeholder: {
     width: 40,
@@ -782,13 +1039,13 @@ const styles = StyleSheet.create({
   sectionTitle: {
     ...TYPOGRAPHY.h4,
     color: COLORS.text,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: SPACING.md,
   },
   infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: SPACING.sm,
   },
   infoLabel: {
@@ -798,11 +1055,11 @@ const styles = StyleSheet.create({
   infoValue: {
     ...TYPOGRAPHY.body2,
     color: COLORS.text,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: SPACING.sm,
     paddingVertical: SPACING.xs,
     borderRadius: BORDER_RADIUS.sm,
@@ -810,15 +1067,15 @@ const styles = StyleSheet.create({
   statusText: {
     ...TYPOGRAPHY.caption,
     color: COLORS.card,
-    fontWeight: '600',
+    fontWeight: "600",
     marginLeft: SPACING.xs,
   },
   paymentStatusContainer: {
     marginTop: SPACING.sm,
   },
   paymentInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: SPACING.md,
   },
   paymentDetails: {
@@ -828,7 +1085,7 @@ const styles = StyleSheet.create({
   paymentStatusText: {
     ...TYPOGRAPHY.body1,
     color: COLORS.text,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   paymentMethod: {
     ...TYPOGRAPHY.body2,
@@ -844,7 +1101,7 @@ const styles = StyleSheet.create({
   bankInfoTitle: {
     ...TYPOGRAPHY.body2,
     color: COLORS.text,
-    fontWeight: '600',
+    fontWeight: "600",
     marginBottom: SPACING.sm,
   },
   bankDetails: {
@@ -855,26 +1112,26 @@ const styles = StyleSheet.create({
   totalTransfer: {
     ...TYPOGRAPHY.body1,
     color: COLORS.primary,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginTop: SPACING.sm,
   },
   codInfo: {
-    backgroundColor: COLORS.success + '10',
+    backgroundColor: COLORS.success + "10",
     padding: SPACING.md,
     borderRadius: BORDER_RADIUS.sm,
     marginBottom: SPACING.md,
     borderWidth: 1,
-    borderColor: COLORS.success + '30',
+    borderColor: COLORS.success + "30",
   },
   codInfoTitle: {
     ...TYPOGRAPHY.body2,
     color: COLORS.text,
-    fontWeight: '600',
+    fontWeight: "600",
     marginBottom: SPACING.sm,
   },
   codDetails: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: SPACING.xs,
   },
   codText: {
@@ -886,9 +1143,9 @@ const styles = StyleSheet.create({
   totalCOD: {
     ...TYPOGRAPHY.body1,
     color: COLORS.success,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginTop: SPACING.sm,
-    textAlign: 'center',
+    textAlign: "center",
   },
   paymentProofSection: {
     marginTop: SPACING.md,
@@ -896,11 +1153,11 @@ const styles = StyleSheet.create({
   paymentProofTitle: {
     ...TYPOGRAPHY.body2,
     color: COLORS.text,
-    fontWeight: '600',
+    fontWeight: "600",
     marginBottom: SPACING.sm,
   },
   proofContainer: {
-    alignItems: 'center',
+    alignItems: "center",
   },
   proofImage: {
     width: 200,
@@ -911,13 +1168,13 @@ const styles = StyleSheet.create({
   proofStatus: {
     ...TYPOGRAPHY.caption,
     color: COLORS.textSecondary,
-    textAlign: 'center',
+    textAlign: "center",
     marginBottom: SPACING.sm,
   },
   changeProofButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     backgroundColor: COLORS.backgroundSecondary,
     borderWidth: 1,
     borderColor: COLORS.primary,
@@ -929,16 +1186,16 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.caption,
     color: COLORS.primary,
     marginLeft: SPACING.xs,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   uploadButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     backgroundColor: COLORS.backgroundSecondary,
     borderWidth: 1,
     borderColor: COLORS.primary,
-    borderStyle: 'dashed',
+    borderStyle: "dashed",
     borderRadius: BORDER_RADIUS.sm,
     paddingVertical: SPACING.lg,
     paddingHorizontal: SPACING.md,
@@ -947,20 +1204,20 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.body2,
     color: COLORS.primary,
     marginLeft: SPACING.sm,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   addressContainer: {
     marginTop: SPACING.sm,
   },
   addressHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: SPACING.xs,
   },
   addressName: {
     ...TYPOGRAPHY.body1,
     color: COLORS.text,
-    fontWeight: '600',
+    fontWeight: "600",
     marginLeft: SPACING.sm,
   },
   addressPhone: {
@@ -978,11 +1235,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.divider,
     borderRadius: BORDER_RADIUS.sm,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   sellerHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: COLORS.backgroundSecondary,
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.sm,
@@ -992,7 +1249,7 @@ const styles = StyleSheet.create({
   sellerName: {
     ...TYPOGRAPHY.body2,
     color: COLORS.text,
-    fontWeight: '600',
+    fontWeight: "600",
     marginLeft: SPACING.sm,
     flex: 1,
   },
@@ -1001,8 +1258,8 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
   },
   orderItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingVertical: SPACING.md,
     paddingHorizontal: SPACING.md,
     borderBottomWidth: 1,
@@ -1016,8 +1273,8 @@ const styles = StyleSheet.create({
   sellerSummaryText: {
     ...TYPOGRAPHY.body2,
     color: COLORS.primary,
-    fontWeight: '600',
-    textAlign: 'right',
+    fontWeight: "600",
+    textAlign: "right",
   },
   itemImage: {
     width: 60,
@@ -1031,7 +1288,7 @@ const styles = StyleSheet.create({
   itemName: {
     ...TYPOGRAPHY.body2,
     color: COLORS.text,
-    fontWeight: '500',
+    fontWeight: "500",
     marginBottom: SPACING.xs,
   },
   itemVariant: {
@@ -1040,13 +1297,13 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.xs,
   },
   itemPriceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   itemPrice: {
     ...TYPOGRAPHY.body2,
     color: COLORS.primary,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   itemQuantity: {
     ...TYPOGRAPHY.body2,
@@ -1056,13 +1313,13 @@ const styles = StyleSheet.create({
   itemTotal: {
     ...TYPOGRAPHY.body2,
     color: COLORS.text,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginLeft: SPACING.md,
   },
   summaryRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: SPACING.sm,
   },
   summaryLabel: {
@@ -1072,11 +1329,11 @@ const styles = StyleSheet.create({
   summaryValue: {
     ...TYPOGRAPHY.body2,
     color: COLORS.text,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   freePrice: {
     color: COLORS.success,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   divider: {
     height: 1,
@@ -1084,29 +1341,29 @@ const styles = StyleSheet.create({
     marginVertical: SPACING.md,
   },
   totalRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   totalLabel: {
     ...TYPOGRAPHY.h4,
     color: COLORS.text,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   totalValue: {
     ...TYPOGRAPHY.h4,
     color: COLORS.primary,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   trackingContainer: {
     marginTop: SPACING.sm,
   },
   trackingStep: {
-    flexDirection: 'row',
+    flexDirection: "row",
     marginBottom: SPACING.lg,
   },
   trackingIconContainer: {
-    alignItems: 'center',
+    alignItems: "center",
     marginRight: SPACING.md,
   },
   trackingIcon: {
@@ -1114,8 +1371,8 @@ const styles = StyleSheet.create({
     height: 32,
     borderRadius: 16,
     borderWidth: 2,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   trackingLine: {
     width: 2,
@@ -1128,7 +1385,7 @@ const styles = StyleSheet.create({
   },
   trackingLabel: {
     ...TYPOGRAPHY.body2,
-    fontWeight: '600',
+    fontWeight: "600",
     marginBottom: SPACING.xs,
   },
   trackingDescription: {
@@ -1139,7 +1396,7 @@ const styles = StyleSheet.create({
   trackingDate: {
     ...TYPOGRAPHY.caption,
     color: COLORS.primary,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   notesText: {
     ...TYPOGRAPHY.body2,
@@ -1148,8 +1405,8 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "flex-end",
   },
   modalContent: {
     backgroundColor: COLORS.card,
@@ -1159,15 +1416,15 @@ const styles = StyleSheet.create({
     paddingBottom: SPACING.xl,
   },
   modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: SPACING.md,
   },
   modalTitle: {
     ...TYPOGRAPHY.h4,
     color: COLORS.text,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   modalCloseButton: {
     padding: SPACING.xs,
@@ -1179,9 +1436,9 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.xl,
   },
   modalUploadButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     backgroundColor: COLORS.primary,
     borderRadius: BORDER_RADIUS.md,
     paddingVertical: SPACING.md,
@@ -1196,8 +1453,8 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.lg,
   },
   uploadOptionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: COLORS.backgroundSecondary,
     borderRadius: BORDER_RADIUS.md,
     padding: SPACING.lg,
@@ -1208,7 +1465,7 @@ const styles = StyleSheet.create({
   uploadOptionText: {
     ...TYPOGRAPHY.body1,
     color: COLORS.text,
-    fontWeight: '600',
+    fontWeight: "600",
     marginLeft: SPACING.md,
     flex: 1,
   },
@@ -1220,10 +1477,10 @@ const styles = StyleSheet.create({
     marginTop: SPACING.xs,
   },
   uploadingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.primary + '10',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: COLORS.primary + "10",
     borderRadius: BORDER_RADIUS.sm,
     padding: SPACING.md,
     marginBottom: SPACING.lg,
@@ -1232,11 +1489,11 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.body2,
     color: COLORS.primary,
     marginLeft: SPACING.sm,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   cropInfo: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    alignItems: "flex-start",
     backgroundColor: COLORS.backgroundSecondary,
     borderRadius: BORDER_RADIUS.sm,
     padding: SPACING.md,
@@ -1260,9 +1517,9 @@ const styles = StyleSheet.create({
     ...SHADOWS.medium,
   },
   receiveButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     backgroundColor: COLORS.success,
     borderRadius: BORDER_RADIUS.md,
     paddingVertical: SPACING.md,
@@ -1272,7 +1529,7 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.button,
     color: COLORS.card,
     marginLeft: SPACING.sm,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
 });
 

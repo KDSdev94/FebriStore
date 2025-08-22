@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -12,49 +12,83 @@ import {
   Modal,
   TextInput,
   ScrollView,
-} from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '../../utils/constants';
-import { useAuth } from '../../contexts/AuthContext';
-import { useOrder } from '../../contexts/OrderContext';
-import { adminService } from '../../services/adminService';
-
+} from "react-native";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import {
+  COLORS,
+  TYPOGRAPHY,
+  SPACING,
+  BORDER_RADIUS,
+  SHADOWS,
+} from "../../utils/constants";
+import { useAuth } from "../../contexts/AuthContext";
+import { useOrder } from "../../contexts/OrderContext";
+import { adminService } from "../../services/adminService";
 
 const AdminOrdersScreen = ({ navigation, route }) => {
   const { user } = useAuth();
-  const { orders: allOrders, loading: ordersLoading, getOrdersByStatus, getStatusInfo, updateOrderStatus, loadOrders } = useOrder();
+  const {
+    orders: allOrders,
+    loading: ordersLoading,
+    getOrdersByStatus,
+    getStatusInfo,
+    updateOrderStatus,
+    loadOrders,
+    deleteAllOrdersAdmin,
+  } = useOrder();
   const [filteredOrders, setFilteredOrders] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
-  const [selectedFilter, setSelectedFilter] = useState('all');
+  const [selectedFilter, setSelectedFilter] = useState("all");
   const [showVerificationModal, setShowVerificationModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
-  const [verificationNotes, setVerificationNotes] = useState('');
+  const [verificationNotes, setVerificationNotes] = useState("");
 
   // Calculate counts for each filter
   const getFilterCounts = () => {
     return {
       all: allOrders.length,
-      pending_payment: allOrders.filter(order => order.status === 'pending_payment').length,
-      pending_verification: allOrders.filter(order => order.status === 'pending_verification').length,
-      payment_confirmed: allOrders.filter(order => order.status === 'payment_confirmed').length,
-      processing: allOrders.filter(order => order.status === 'processing').length,
-      shipped: allOrders.filter(order => order.status === 'shipped').length,
-      delivered: allOrders.filter(order => order.status === 'delivered').length,
-      cancelled: allOrders.filter(order => order.status === 'cancelled').length,
+      pending_payment: allOrders.filter(
+        (order) => order.status === "pending_payment"
+      ).length,
+      pending_verification: allOrders.filter(
+        (order) => order.status === "pending_verification"
+      ).length,
+      payment_confirmed: allOrders.filter(
+        (order) => order.status === "payment_confirmed"
+      ).length,
+      processing: allOrders.filter((order) => order.status === "processing")
+        .length,
+      shipped: allOrders.filter((order) => order.status === "shipped").length,
+      delivered: allOrders.filter((order) => order.status === "delivered")
+        .length,
+      cancelled: allOrders.filter((order) => order.status === "cancelled")
+        .length,
     };
   };
 
   const counts = getFilterCounts();
 
   const filterOptions = [
-    { key: 'all', label: 'Semua Pesanan', count: counts.all },
-    { key: 'pending_payment', label: 'Menunggu Pembayaran', count: counts.pending_payment },
-    { key: 'pending_verification', label: 'Perlu Verifikasi', count: counts.pending_verification },
-    { key: 'payment_confirmed', label: 'Perlu Diproses', count: counts.payment_confirmed },
-    { key: 'processing', label: 'Sedang Diproses', count: counts.processing },
-    { key: 'shipped', label: 'Dikirim', count: counts.shipped },
-    { key: 'delivered', label: 'Selesai', count: counts.delivered },
-    { key: 'cancelled', label: 'Dibatalkan', count: counts.cancelled },
+    { key: "all", label: "Semua Pesanan", count: counts.all },
+    {
+      key: "pending_payment",
+      label: "Menunggu Pembayaran",
+      count: counts.pending_payment,
+    },
+    {
+      key: "pending_verification",
+      label: "Perlu Verifikasi",
+      count: counts.pending_verification,
+    },
+    {
+      key: "payment_confirmed",
+      label: "Perlu Diproses",
+      count: counts.payment_confirmed,
+    },
+    { key: "processing", label: "Sedang Diproses", count: counts.processing },
+    { key: "shipped", label: "Dikirim", count: counts.shipped },
+    { key: "delivered", label: "Selesai", count: counts.delivered },
+    { key: "cancelled", label: "Dibatalkan", count: counts.cancelled },
   ];
 
   useEffect(() => {
@@ -70,14 +104,16 @@ const AdminOrdersScreen = ({ navigation, route }) => {
 
   const filterOrders = () => {
     let filtered = allOrders;
-    
-    if (selectedFilter !== 'all') {
-      filtered = allOrders.filter(order => order.status === selectedFilter);
+
+    if (selectedFilter !== "all") {
+      filtered = allOrders.filter((order) => order.status === selectedFilter);
     }
-    
+
     // Sort by creation date (newest first)
-    filtered = filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-    
+    filtered = filtered.sort(
+      (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+    );
+
     setFilteredOrders(filtered);
   };
 
@@ -87,31 +123,29 @@ const AdminOrdersScreen = ({ navigation, route }) => {
     setRefreshing(false);
   };
 
-
-
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
+    return new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
       minimumFractionDigits: 0,
     }).format(amount);
   };
 
   const formatDate = (timestamp) => {
-    if (!timestamp) return '-';
+    if (!timestamp) return "-";
     const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-    return date.toLocaleDateString('id-ID', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+    return date.toLocaleDateString("id-ID", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
   const handleVerifyPayment = (order) => {
     setSelectedOrder(order);
-    setVerificationNotes('');
+    setVerificationNotes("");
     setShowVerificationModal(true);
   };
 
@@ -123,42 +157,45 @@ const AdminOrdersScreen = ({ navigation, route }) => {
         status: status, // 'approved' or 'rejected'
         adminId: user.id,
         notes: verificationNotes,
-        rejectionReason: status === 'rejected' ? verificationNotes : ''
+        rejectionReason: status === "rejected" ? verificationNotes : "",
       };
 
-      const result = await adminService.verifyPayment(selectedOrder.id, verificationData);
-      
+      const result = await adminService.verifyPayment(
+        selectedOrder.id,
+        verificationData
+      );
+
       if (result.success) {
         Alert.alert(
-          'Berhasil',
-          `Pembayaran ${status === 'approved' ? 'disetujui' : 'ditolak'}`
+          "Berhasil",
+          `Pembayaran ${status === "approved" ? "disetujui" : "ditolak"}`
         );
         setShowVerificationModal(false);
         loadOrders(); // Reload data
       } else {
-        Alert.alert('Error', result.error);
+        Alert.alert("Error", result.error);
       }
     } catch (error) {
-      console.error('Error processing verification:', error);
-      Alert.alert('Error', 'Terjadi kesalahan saat memproses verifikasi');
+      console.error("Error processing verification:", error);
+      Alert.alert("Error", "Terjadi kesalahan saat memproses verifikasi");
     }
   };
 
   const renderOrderItem = ({ item }) => {
     const statusInfo = getStatusInfo(item.status);
-    
+
     return (
-      <TouchableOpacity 
+      <TouchableOpacity
         style={styles.orderCard}
-        onPress={() => navigation.navigate('AdminOrderDetail', { order: item })}
+        onPress={() => navigation.navigate("AdminOrderDetail", { order: item })}
         activeOpacity={0.7}
       >
         <View style={styles.orderHeader}>
           <Text style={styles.orderId}>#{item.orderNumber}</Text>
           <Text style={styles.orderAmount}>
             {formatCurrency(
-              item.paymentMethod === 'cod' 
-                ? item.subtotal || (item.totalAmount - (item.adminFee || 1500)) // COD tanpa biaya admin
+              item.paymentMethod === "cod"
+                ? item.subtotal || item.totalAmount - (item.adminFee || 1500) // COD tanpa biaya admin
                 : item.totalAmount // Non-COD dengan biaya admin
             )}
           </Text>
@@ -168,28 +205,47 @@ const AdminOrdersScreen = ({ navigation, route }) => {
           <Text style={styles.buyerText}>Customer: {item.userName}</Text>
           <Text style={styles.emailText}>{item.userEmail}</Text>
           <Text style={styles.itemCountText}>{item.itemCount} produk</Text>
-          
+
           {/* Show seller info */}
           {(() => {
-            const sellers = [...new Set(item.items.map(orderItem => orderItem.sellerName).filter(Boolean))];
-            return sellers.length > 0 && (
-              <View style={styles.sellersContainer}>
-                <MaterialCommunityIcons name="store" size={14} color={COLORS.textSecondary} />
-                <Text style={styles.sellersText}>
-                  {sellers.length === 1 
-                    ? `Toko: ${sellers[0]}` 
-                    : `${sellers.length} toko: ${sellers[0]}${sellers.length > 1 ? ` +${sellers.length - 1} lainnya` : ''}`
-                  }
-                </Text>
-              </View>
+            const sellers = [
+              ...new Set(
+                item.items
+                  .map((orderItem) => orderItem.sellerName)
+                  .filter(Boolean)
+              ),
+            ];
+            return (
+              sellers.length > 0 && (
+                <View style={styles.sellersContainer}>
+                  <MaterialCommunityIcons
+                    name="store"
+                    size={14}
+                    color={COLORS.textSecondary}
+                  />
+                  <Text style={styles.sellersText}>
+                    {sellers.length === 1
+                      ? `Toko: ${sellers[0]}`
+                      : `${sellers.length} toko: ${sellers[0]}${
+                          sellers.length > 1
+                            ? ` +${sellers.length - 1} lainnya`
+                            : ""
+                        }`}
+                  </Text>
+                </View>
+              )
             );
           })()}
         </View>
 
         <View style={styles.paymentInfo}>
-          {item.paymentMethod === 'cod' ? (
+          {item.paymentMethod === "cod" ? (
             <View style={styles.codIndicator}>
-              <MaterialCommunityIcons name="cash" size={16} color={COLORS.success} />
+              <MaterialCommunityIcons
+                name="cash"
+                size={16}
+                color={COLORS.success}
+              />
               <Text style={styles.codText}>COD - Gratis Admin</Text>
             </View>
           ) : (
@@ -198,12 +254,20 @@ const AdminOrdersScreen = ({ navigation, route }) => {
               <View style={styles.proofStatus}>
                 {item.paymentProof ? (
                   <View style={styles.proofIndicator}>
-                    <MaterialCommunityIcons name="image" size={16} color={COLORS.success} />
+                    <MaterialCommunityIcons
+                      name="image"
+                      size={16}
+                      color={COLORS.success}
+                    />
                     <Text style={styles.proofText}>Ada bukti</Text>
                   </View>
                 ) : (
                   <View style={styles.proofIndicator}>
-                    <MaterialCommunityIcons name="image-off" size={16} color={COLORS.textLight} />
+                    <MaterialCommunityIcons
+                      name="image-off"
+                      size={16}
+                      color={COLORS.textLight}
+                    />
                     <Text style={styles.noProofText}>Belum ada bukti</Text>
                   </View>
                 )}
@@ -211,27 +275,37 @@ const AdminOrdersScreen = ({ navigation, route }) => {
             </>
           )}
         </View>
-        
+
         <View style={styles.orderFooter}>
-          <View style={[styles.statusBadge, { backgroundColor: statusInfo.color }]}>
-            <MaterialCommunityIcons name={statusInfo.icon} size={14} color={COLORS.card} />
+          <View
+            style={[styles.statusBadge, { backgroundColor: statusInfo.color }]}
+          >
+            <MaterialCommunityIcons
+              name={statusInfo.icon}
+              size={14}
+              color={COLORS.card}
+            />
             <Text style={styles.statusText}>{statusInfo.label}</Text>
           </View>
-          
+
           {/* Quick Action Buttons */}
-          {item.status === 'pending_verification' && item.paymentProof && (
-            <TouchableOpacity 
+          {item.status === "pending_verification" && item.paymentProof && (
+            <TouchableOpacity
               style={styles.quickActionButton}
               onPress={(e) => {
                 e.stopPropagation();
                 handleVerifyPayment(item);
               }}
             >
-              <MaterialCommunityIcons name="check-circle" size={16} color={COLORS.success} />
+              <MaterialCommunityIcons
+                name="check-circle"
+                size={16}
+                color={COLORS.success}
+              />
               <Text style={styles.quickActionText}>Verifikasi</Text>
             </TouchableOpacity>
           )}
-          
+
           <Text style={styles.orderDate}>{formatDate(item.createdAt)}</Text>
         </View>
       </TouchableOpacity>
@@ -242,14 +316,16 @@ const AdminOrdersScreen = ({ navigation, route }) => {
     <TouchableOpacity
       style={[
         styles.filterTab,
-        selectedFilter === item.key && styles.activeFilterTab
+        selectedFilter === item.key && styles.activeFilterTab,
       ]}
       onPress={() => setSelectedFilter(item.key)}
     >
-      <Text style={[
-        styles.filterTabText,
-        selectedFilter === item.key && styles.activeFilterTabText
-      ]}>
+      <Text
+        style={[
+          styles.filterTabText,
+          selectedFilter === item.key && styles.activeFilterTabText,
+        ]}
+      >
         {item.label}
       </Text>
     </TouchableOpacity>
@@ -260,9 +336,9 @@ const AdminOrdersScreen = ({ navigation, route }) => {
       <View style={styles.container}>
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Pesanan</Text>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.settingsButton}
-            onPress={() => navigation.navigate('AdminSettings')}
+            onPress={() => navigation.navigate("AdminSettings")}
           >
             <MaterialCommunityIcons name="cog" size={24} color={COLORS.white} />
           </TouchableOpacity>
@@ -280,24 +356,103 @@ const AdminOrdersScreen = ({ navigation, route }) => {
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Pesanan</Text>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.settingsButton}
-          onPress={() => navigation.navigate('AdminSettings')}
+          onPress={() => navigation.navigate("AdminSettings")}
         >
           <MaterialCommunityIcons name="cog" size={24} color={COLORS.white} />
         </TouchableOpacity>
       </View>
 
+      {/* FAB: Hapus semua pesanan (ADMIN) - konfirmasi HAPUS */}
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={() => {
+          Alert.prompt?.(
+            "Konfirmasi Penghapusan",
+            "Ketik HAPUS untuk menghapus SEMUA pesanan dari database.",
+            [
+              { text: "Batal", style: "cancel" },
+              {
+                text: "Lanjut",
+                style: "destructive",
+                onPress: async (text) => {
+                  if (text !== "HAPUS") {
+                    Alert.alert("Dibatalkan", "Ketik HAPUS untuk melanjutkan.");
+                    return;
+                  }
+                  try {
+                    const result = await deleteAllOrdersAdmin();
+                    if (result.success) {
+                      Alert.alert(
+                        "Berhasil",
+                        `Terhapus ${result.deleted} pesanan.`
+                      );
+                      await onRefresh();
+                    } else {
+                      Alert.alert(
+                        "Error",
+                        result.error || "Gagal menghapus pesanan"
+                      );
+                    }
+                  } catch (e) {
+                    Alert.alert(
+                      "Error",
+                      "Terjadi kesalahan saat menghapus pesanan"
+                    );
+                  }
+                },
+              },
+            ],
+            "plain-text"
+          ) ||
+            Alert.alert(
+              "Konfirmasi Penghapusan",
+              "Fitur ketik HAPUS tidak tersedia. Lanjutkan menghapus semua pesanan?",
+              [
+                { text: "Batal", style: "cancel" },
+                {
+                  text: "Hapus",
+                  style: "destructive",
+                  onPress: async () => {
+                    const result = await deleteAllOrdersAdmin();
+                    if (result.success) {
+                      Alert.alert(
+                        "Berhasil",
+                        `Terhapus ${result.deleted} pesanan.`
+                      );
+                      await onRefresh();
+                    } else {
+                      Alert.alert(
+                        "Error",
+                        result.error || "Gagal menghapus pesanan"
+                      );
+                    }
+                  },
+                },
+              ]
+            );
+        }}
+      >
+        <MaterialCommunityIcons
+          name="delete-forever"
+          size={24}
+          color={COLORS.white}
+        />
+      </TouchableOpacity>
+
       <ScrollView
         style={styles.content}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
       >
         {/* Management Title */}
         <Text style={styles.managementTitle}>Manajemen Pesanan</Text>
 
         {/* Filter Tabs */}
-        <ScrollView 
-          horizontal 
+        <ScrollView
+          horizontal
           showsHorizontalScrollIndicator={false}
           style={styles.filterScrollView}
           contentContainerStyle={styles.filterContainer}
@@ -307,14 +462,16 @@ const AdminOrdersScreen = ({ navigation, route }) => {
               key={filter.key}
               style={[
                 styles.filterTab,
-                selectedFilter === filter.key && styles.activeFilterTab
+                selectedFilter === filter.key && styles.activeFilterTab,
               ]}
               onPress={() => setSelectedFilter(filter.key)}
             >
-              <Text style={[
-                styles.filterTabText,
-                selectedFilter === filter.key && styles.activeFilterTabText
-              ]}>
+              <Text
+                style={[
+                  styles.filterTabText,
+                  selectedFilter === filter.key && styles.activeFilterTabText,
+                ]}
+              >
                 {filter.label}
               </Text>
             </TouchableOpacity>
@@ -325,15 +482,19 @@ const AdminOrdersScreen = ({ navigation, route }) => {
         <View style={styles.ordersList}>
           {filteredOrders.length === 0 ? (
             <View style={styles.emptyContainer}>
-              <MaterialCommunityIcons name="clipboard-list-outline" size={64} color={COLORS.textLight} />
+              <MaterialCommunityIcons
+                name="clipboard-list-outline"
+                size={64}
+                color={COLORS.textLight}
+              />
               <Text style={styles.emptyText}>Tidak ada pesanan</Text>
-              <Text style={styles.emptySubtext}>Pesanan akan muncul di sini</Text>
+              <Text style={styles.emptySubtext}>
+                Pesanan akan muncul di sini
+              </Text>
             </View>
           ) : (
             filteredOrders.map((item) => (
-              <View key={item.id}>
-                {renderOrderItem({ item })}
-              </View>
+              <View key={item.id}>{renderOrderItem({ item })}</View>
             ))
           )}
         </View>
@@ -354,7 +515,11 @@ const AdminOrdersScreen = ({ navigation, route }) => {
                 onPress={() => setShowVerificationModal(false)}
                 style={styles.modalCloseButton}
               >
-                <MaterialCommunityIcons name="close" size={24} color={COLORS.textSecondary} />
+                <MaterialCommunityIcons
+                  name="close"
+                  size={24}
+                  color={COLORS.textSecondary}
+                />
               </TouchableOpacity>
             </View>
 
@@ -372,14 +537,14 @@ const AdminOrdersScreen = ({ navigation, route }) => {
               <View style={styles.modalActions}>
                 <TouchableOpacity
                   style={[styles.modalButton, styles.rejectButton]}
-                  onPress={() => processVerification('rejected')}
+                  onPress={() => processVerification("rejected")}
                 >
                   <Text style={styles.rejectButtonText}>Tolak</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
                   style={[styles.modalButton, styles.approveButton]}
-                  onPress={() => processVerification('approved')}
+                  onPress={() => processVerification("approved")}
                 >
                   <Text style={styles.approveButtonText}>Setujui</Text>
                 </TouchableOpacity>
@@ -402,18 +567,35 @@ const styles = StyleSheet.create({
     paddingTop: 50,
     paddingBottom: 20,
     paddingHorizontal: 20,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   headerTitle: {
     ...TYPOGRAPHY.h2,
     color: COLORS.white,
-    fontWeight: 'bold',
+    fontWeight: "bold",
+  },
+  fab: {
+    position: "absolute",
+    right: 16,
+    bottom: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: COLORS.error,
+    elevation: 6,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    zIndex: 10,
   },
   headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   updateButton: {
     padding: SPACING.sm,
@@ -428,7 +610,7 @@ const styles = StyleSheet.create({
   },
   managementTitle: {
     ...TYPOGRAPHY.h3,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     color: COLORS.textPrimary,
     marginBottom: 20,
   },
@@ -436,7 +618,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   filterContainer: {
-    flexDirection: 'row',
+    flexDirection: "row",
     paddingHorizontal: 0,
     paddingRight: 16,
   },
@@ -447,7 +629,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     marginRight: 12,
     minWidth: 80,
-    alignItems: 'center',
+    alignItems: "center",
   },
   activeFilterTab: {
     backgroundColor: COLORS.primary,
@@ -468,26 +650,26 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 12,
     elevation: 2,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
   orderHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 8,
   },
   orderId: {
     ...TYPOGRAPHY.h4,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     color: COLORS.textPrimary,
     flex: 1,
   },
   orderAmount: {
     ...TYPOGRAPHY.h4,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     color: COLORS.primary,
   },
   buyerText: {
@@ -504,13 +686,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 12,
-    alignSelf: 'flex-start',
+    alignSelf: "flex-start",
     marginBottom: 8,
   },
   statusText: {
     ...TYPOGRAPHY.body2,
     color: COLORS.white,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   orderDate: {
     ...TYPOGRAPHY.caption,
@@ -520,8 +702,8 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.md,
   },
   orderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: SPACING.xs,
   },
   orderDetailText: {
@@ -532,16 +714,16 @@ const styles = StyleSheet.create({
   orderAmount: {
     ...TYPOGRAPHY.body1,
     color: COLORS.text,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginLeft: SPACING.sm,
   },
   orderActions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
+    flexDirection: "row",
+    justifyContent: "flex-end",
   },
   actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.sm,
     borderRadius: BORDER_RADIUS.sm,
@@ -552,13 +734,13 @@ const styles = StyleSheet.create({
   actionButtonText: {
     ...TYPOGRAPHY.body2,
     color: COLORS.card,
-    fontWeight: '600',
+    fontWeight: "600",
     marginLeft: SPACING.xs,
   },
   emptyContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     paddingVertical: SPACING.xl * 2,
   },
   emptyText: {
@@ -570,12 +752,12 @@ const styles = StyleSheet.create({
   emptySubtext: {
     ...TYPOGRAPHY.body2,
     color: COLORS.textLight,
-    textAlign: 'center',
+    textAlign: "center",
   },
   loadingContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     paddingVertical: SPACING.xl,
   },
   loadingText: {
@@ -585,19 +767,19 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "flex-end",
   },
   modalContent: {
     backgroundColor: COLORS.card,
     borderTopLeftRadius: BORDER_RADIUS.lg,
     borderTopRightRadius: BORDER_RADIUS.lg,
-    maxHeight: '60%',
+    maxHeight: "60%",
   },
   modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     padding: SPACING.lg,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.divider,
@@ -605,7 +787,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     ...TYPOGRAPHY.h4,
     color: COLORS.text,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   modalCloseButton: {
     padding: SPACING.xs,
@@ -616,7 +798,7 @@ const styles = StyleSheet.create({
   modalLabel: {
     ...TYPOGRAPHY.body2,
     color: COLORS.text,
-    fontWeight: '600',
+    fontWeight: "600",
     marginBottom: SPACING.sm,
   },
   modalTextInput: {
@@ -628,19 +810,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.sm,
     backgroundColor: COLORS.backgroundSecondary,
-    textAlignVertical: 'top',
+    textAlignVertical: "top",
     marginBottom: SPACING.lg,
   },
   modalActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     gap: SPACING.md,
   },
   modalButton: {
     flex: 1,
     paddingVertical: SPACING.md,
     borderRadius: BORDER_RADIUS.sm,
-    alignItems: 'center',
+    alignItems: "center",
   },
   rejectButton: {
     backgroundColor: COLORS.error,
@@ -648,12 +830,12 @@ const styles = StyleSheet.create({
   rejectButtonText: {
     ...TYPOGRAPHY.body1,
     color: COLORS.card,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   approveButtonText: {
     ...TYPOGRAPHY.body1,
     color: COLORS.card,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   // New styles for updated components
   orderInfo: {
@@ -669,8 +851,8 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
   },
   sellersContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginTop: SPACING.xs,
     paddingHorizontal: SPACING.xs,
     paddingVertical: SPACING.xs,
@@ -681,47 +863,47 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.caption,
     color: COLORS.textSecondary,
     marginLeft: SPACING.xs,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   paymentInfo: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: SPACING.sm,
   },
   paymentMethodText: {
     ...TYPOGRAPHY.body2,
     color: COLORS.text,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   proofStatus: {
-    alignItems: 'flex-end',
+    alignItems: "flex-end",
   },
   codIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.success + '10',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: COLORS.success + "10",
     paddingHorizontal: SPACING.sm,
     paddingVertical: SPACING.xs,
     borderRadius: BORDER_RADIUS.sm,
     borderWidth: 1,
-    borderColor: COLORS.success + '30',
+    borderColor: COLORS.success + "30",
   },
   codText: {
     ...TYPOGRAPHY.caption,
     color: COLORS.success,
-    fontWeight: '600',
+    fontWeight: "600",
     marginLeft: SPACING.xs,
   },
   proofIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   proofText: {
     ...TYPOGRAPHY.caption,
     color: COLORS.success,
     marginLeft: SPACING.xs,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   noProofText: {
     ...TYPOGRAPHY.caption,
@@ -729,13 +911,13 @@ const styles = StyleSheet.create({
     marginLeft: SPACING.xs,
   },
   orderFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: SPACING.sm,
     paddingVertical: SPACING.xs,
     borderRadius: BORDER_RADIUS.sm,
@@ -743,12 +925,12 @@ const styles = StyleSheet.create({
   statusText: {
     ...TYPOGRAPHY.caption,
     color: COLORS.card,
-    fontWeight: '600',
+    fontWeight: "600",
     marginLeft: SPACING.xs,
   },
   quickActionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: COLORS.success,
     paddingHorizontal: SPACING.sm,
     paddingVertical: SPACING.xs,
@@ -758,7 +940,7 @@ const styles = StyleSheet.create({
   quickActionText: {
     ...TYPOGRAPHY.caption,
     color: COLORS.white,
-    fontWeight: '600',
+    fontWeight: "600",
     marginLeft: SPACING.xs,
   },
 });
