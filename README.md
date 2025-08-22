@@ -1,54 +1,140 @@
-# FebriStore (Expo React Native)
+# ?? FebriStore - E-Commerce Mobile App
 
-Aplikasi mobile Ecommerce untuk toko online yang menggunakan platform Expo React Native.
+<div align="center">
+  <img src="https://img.shields.io/badge/React%20Native-20232A?style=for-the-badge&logo=react&logoColor=61DAFB" alt="React Native" />
+  <img src="https://img.shields.io/badge/Expo-000020?style=for-the-badge&logo=expo&logoColor=white" alt="Expo" />
+  <img src="https://img.shields.io/badge/Firebase-FFCA28?style=for-the-badge&logo=firebase&logoColor=black" alt="Firebase" />
+  <img src="https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black" alt="JavaScript" />
+</div>
 
-## Prasyarat
+## ?? Tentang Aplikasi
 
-- Node.js LTS
+FebriStore adalah aplikasi mobile e-commerce yang dibangun menggunakan Expo React Native. Aplikasi ini menyediakan platform lengkap untuk toko online dengan fitur-fitur modern dan user-friendly interface.
+
+### ? Fitur Utama
+
+- ??? **Multi-Role System**: Admin, Seller, dan Buyer
+- ?? **Store Management**: Kelola toko dan profil seller
+- ?? **Product Management**: CRUD produk dengan kategori
+- ?? **Shopping Cart**: Keranjang belanja dengan wishlist
+- ?? **Checkout System**: Proses pembelian yang mudah
+- ?? **Address Management**: Kelola alamat pengiriman
+- ?? **Order Tracking**: Lacak status pesanan
+- ?? **Revenue Analytics**: Dashboard admin dengan statistik
+- ?? **Notifications**: Sistem notifikasi real-time
+- ?? **Authentication**: Login/Register dengan Firebase Auth
+
+## ?? Quick Start
+
+### Prasyarat
+
+- Node.js LTS (v16 atau lebih baru)
 - npm atau yarn
-- Expo CLI (`npm i -g expo`)
+- Expo CLI (
+  pm install -g @expo/cli)
 - Akun Firebase (Firestore, Auth, Storage)
+- Android Studio / Xcode (untuk emulator)
 
-## Menjalankan secara lokal
+### Instalasi
 
-```bash
-# install dependencies
+`ash
+
+# Clone repository
+
+git clone https://github.com/KDSdev94/E-SkuulTime.git
+cd "EXPO Ecommerce"
+
+# Install dependencies
+
 npm install
 
-# jalankan app
+# Jalankan aplikasi
+
 npx expo start
-```
+`
 
-Scan QR di Expo Go (Android/iOS) atau jalankan di emulator.
+### Menjalankan di Device
 
-## Konfigurasi Firebase
+1. **Android/iOS**: Scan QR code dengan Expo Go app
+2. **Emulator**: Tekan  untuk Android atau i untuk iOS
+3. **Web**: Tekan w untuk membuka di browser
 
-Letakkan konfigurasi Firebase di `config/firebase.js` (web) dan file pendukung lainnya sesuai struktur saat ini. Pastikan kredensial tidak dikomit: gunakan file `.env` bila perlu.
+## ?? Konfigurasi
 
-## Build
+### Firebase Setup
 
-- Development build: gunakan EAS Build (opsional)
-- Produksi: sesuaikan dengan kebutuhan, karena project saat ini fokus pada Expo managed workflow
+1. Buat project Firebase baru
+2. Enable Authentication, Firestore, dan Storage
+3. Download google-services.json dan letakkan di root project
+4. Update konfigurasi di irebaseConfig.js
 
-## Struktur Proyek (ringkas)
+`javascript
+// firebaseConfig.js
+const firebaseConfig = {
+  apiKey: "your-api-key",
+  authDomain: "your-project.firebaseapp.com",
+  projectId: "your-project-id",
+  storageBucket: "your-project.appspot.com",
+  messagingSenderId: "123456789",
+  appId: "your-app-id"
+};
+`
 
-- `Pages/` halaman role (admin, guru, murid, dsb)
-- `components/` komponen UI dan utilitas
-- `services/` akses data dan integrasi Firebase
-- `context/` konteks React (user, notifikasi, aktivitas)
-- `scripts/` skrip utilitas Node untuk administrasi data
+## ?? Struktur Proyek
 
-## Kontribusi
+`?? FebriStore
++-- ?? components/          # Komponen UI reusable
++-- ?? contexts/           # React Context providers
++-- ?? navigation/         # Navigasi aplikasi
++-- ?? screens/           # Layar aplikasi
+�   +-- ?? admin/         # Layar admin
+�   +-- ?? buyer/         # Layar pembeli
+�   +-- ?? seller/        # Layar penjual
++-- ?? services/          # Service layer & API calls
++-- ?? scripts/           # Utility scripts
++-- ?? utils/             # Helper functions
++-- ?? assets/            # Gambar, font, dll
++-- ?? App.js             # Entry point
++-- ?? firebaseConfig.js  # Konfigurasi Firebase
++-- ?? package.json       # Dependencies`
 
-1. Fork/clone
-2. Buat branch fitur: `git checkout -b feat/nama-fitur`
-3. Commit: `git commit -m "feat: deskripsi singkat"`
-4. Push dan buka Pull Request
+## ?? Scripts Tersedia
 
-## Lisensi
+`ash
 
-Hak cipta pemilik repository. Lihat ketentuan internal proyek.
+# Development
 
-## Repository
+npm start # Jalankan Expo dev server
+npm run android # Jalankan di Android
+npm run ios # Jalankan di iOS
+npm run web # Jalankan di web browser
 
-Repository GitHub: https://github.com/KDSdev94/E-SkuulTime.git
+# Database Management
+
+node clearAllOrders.js # Hapus semua order
+node setupSellerBankInfo.js # Setup info bank seller
+node updateExistingProducts.js # Update produk existing
+`
+
+## ?? Screenshots
+
+_Tambahkan screenshot aplikasi di sini_
+
+## ?? Contributing
+
+1. Fork repository ini
+2. Buat branch fitur: git checkout -b feature/amazing-feature
+3. Commit perubahan: git commit -m 'Add amazing feature'
+4. Push ke branch: git push origin feature/amazing-feature
+5. Buka Pull Request
+
+## ?? License
+
+Hak cipta � 2024 FebriStore. All rights reserved.
+
+---
+
+<div align="center">
+  <p>Made with ?? by FebriStore Team</p>
+  <p>? Star this repo if you find it helpful!</p>
+</div>
